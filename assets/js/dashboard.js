@@ -1,6 +1,7 @@
 // Dashboard JavaScript
 class TheCentiDashboard {
     constructor() {
+        this.API_BASE = 'https://thecenti-live-hub.giobi.workers.dev';
         this.state = {
             voteOpen: false,
             aiEnabled: false,
@@ -65,26 +66,49 @@ class TheCentiDashboard {
     // WebSocket Connection
     connectWebSocket() {
         try {
-            // In production, this will be your Cloudflare Worker WebSocket endpoint
-            // For now, we'll simulate the connection
-            setTimeout(() => {
-                this.updateConnectionStatus(true);
-                this.startHeartbeat();
-            }, 1000);
+            // Connect to real API and check status
+            this.checkConnectionStatus();
             
-            // Simulate some initial data
-            setTimeout(() => {
-                this.updateVoteResults([
-                    { name: 'Albachiara', votes: 42 },
-                    { name: 'Vita Spericolata', votes: 31 },
-                    { name: 'Sally', votes: 27 }
-                ]);
-            }, 2000);
+            // Start polling for real-time updates
+            this.startPolling();
             
         } catch (error) {
-            console.error('WebSocket connection failed:', error);
+            console.error('API connection failed:', error);
             this.updateConnectionStatus(false);
         }
+    }
+
+    async checkConnectionStatus() {
+        try {
+            const response = await fetch(`${this.API_BASE}/api/state`);
+            if (response.ok) {
+                const state = await response.json();
+                this.updateConnectionStatus(true);
+                this.updateVoteStatus(state.voteOpen || false);
+                this.updateAIStatus(state.aiEnabled || false);
+                
+                // Load initial data
+                this.loadVoteResults();
+                this.loadAIQueue();
+            } else {
+                throw new Error('API not responding');
+            }
+        } catch (error) {
+            console.error('Connection check failed:', error);
+            this.updateConnectionStatus(false);
+            // Retry in 10 seconds
+            setTimeout(() => this.checkConnectionStatus(), 10000);
+        }
+    }
+
+    startPolling() {
+        // Poll for updates every 3 seconds
+        setInterval(() => {
+            if (this.state.connected) {
+                this.loadVoteResults();
+                this.loadAIQueue();
+            }
+        }, 3000);
     }
 
     startHeartbeat() {
@@ -96,39 +120,40 @@ class TheCentiDashboard {
     }
 
     // Vote Control Methods
-    toggleVote() {
+    async toggleVote() {
         const newState = !this.state.voteOpen;
-        this.state.voteOpen = newState;
         
-        // Send to WebSocket/API
-        this.sendStateUpdate('vote', newState);
+        const action = newState ? 'start_vote' : 'close_vote';
+        const result = await this.sendVoteAction(action);
         
-        // Update UI
-        this.updateVoteStatus(newState);
-        this.updateToggleButton('toggleVote', newState, 'APRI VOTI', 'CHIUDI VOTI');
-        
-        if (newState) {
-            this.showNotification('✅ Votazione APERTA! Il pubblico può ora votare.', 'success');
-        } else {
-            this.showNotification('🔒 Votazione CHIUSA. Risultati finali salvati.', 'info');
+        if (result) {
+            this.state.voteOpen = newState;
+            this.updateVoteStatus(newState);
+            this.updateToggleButton('toggleVote', newState, 'APRI VOTI', 'CHIUDI VOTI');
+            
+            if (newState) {
+                this.showNotification('✅ Votazione APERTA! Il pubblico può ora votare.', 'success');
+            } else {
+                this.showNotification('🔒 Votazione CHIUSA. Risultati finali salvati.', 'info');
+            }
         }
     }
 
-    toggleAI() {
+    async toggleAI() {
         const newState = !this.state.aiEnabled;
-        this.state.aiEnabled = newState;
         
-        // Send to WebSocket/API
-        this.sendStateUpdate('ai', newState);
+        const result = await this.sendStateUpdate('aiEnabled', newState);
         
-        // Update UI
-        this.updateAIStatus(newState);
-        this.updateToggleButton('toggleAI', newState, 'ABILITA AI', 'DISABILITA AI');
-        
-        if (newState) {
-            this.showNotification('🤖 AI ABILITATA! Il pubblico può fare richieste.', 'success');
-        } else {
-            this.showNotification('🚫 AI DISABILITATA. Richieste bloccate.', 'info');
+        if (result) {
+            this.state.aiEnabled = newState;
+            this.updateAIStatus(newState);
+            this.updateToggleButton('toggleAI', newState, 'ABILITA AI', 'DISABILITA AI');
+            
+            if (newState) {
+                this.showNotification('🤖 AI ABILITATA! Il pubblico può fare richieste.', 'success');
+            } else {
+                this.showNotification('🚫 AI DISABILITATA. Richieste bloccate.', 'info');
+            }
         }
     }
 
@@ -172,44 +197,42 @@ class TheCentiDashboard {
     }
 
     // AI Queue Management
-    approveRequest(queueItem) {
+    async approveRequest(queueItem) {
+        const requestId = queueItem.dataset.requestId;
         const requestText = queueItem.querySelector('.request-text').textContent;
         
-        // Send approval to backend
-        this.sendAIAction('approve', {
-            text: requestText,
-            timestamp: Date.now()
-        });
+        const result = await this.sendAIAction('approve_request', { requestId });
         
-        // Animate and remove from queue
-        queueItem.style.transform = 'translateX(100%)';
-        queueItem.style.opacity = '0';
-        
-        setTimeout(() => {
-            queueItem.remove();
-        }, 300);
-        
-        this.showNotification(`✅ Richiesta approvata: "${requestText.substring(0, 30)}..."`, 'success');
+        if (result) {
+            // Animate and remove from queue
+            queueItem.style.transform = 'translateX(100%)';
+            queueItem.style.opacity = '0';
+            
+            setTimeout(() => {
+                queueItem.remove();
+            }, 300);
+            
+            this.showNotification(`✅ Richiesta approvata: "${requestText.substring(0, 30)}..."`, 'success');
+        }
     }
 
-    rejectRequest(queueItem) {
+    async rejectRequest(queueItem) {
+        const requestId = queueItem.dataset.requestId;
         const requestText = queueItem.querySelector('.request-text').textContent;
         
-        // Send rejection to backend
-        this.sendAIAction('reject', {
-            text: requestText,
-            timestamp: Date.now()
-        });
+        const result = await this.sendAIAction('reject_request', { requestId });
         
-        // Animate and remove from queue
-        queueItem.style.transform = 'translateX(-100%)';
-        queueItem.style.opacity = '0';
-        
-        setTimeout(() => {
-            queueItem.remove();
-        }, 300);
-        
-        this.showNotification(`❌ Richiesta rifiutata`, 'info');
+        if (result) {
+            // Animate and remove from queue
+            queueItem.style.transform = 'translateX(-100%)';
+            queueItem.style.opacity = '0';
+            
+            setTimeout(() => {
+                queueItem.remove();
+            }, 300);
+            
+            this.showNotification(`❌ Richiesta rifiutata`, 'info');
+        }
     }
 
     // Emergency and Reset Functions
@@ -440,34 +463,156 @@ class TheCentiDashboard {
     }
 
     // Communication with Backend
-    sendStateUpdate(type, value) {
-        const data = {
-            type: type,
-            value: value,
-            timestamp: Date.now()
-        };
+    async sendStateUpdate(type, value) {
+        const data = { [type]: value };
         
-        console.log('Sending state update:', data);
-        
-        // In production, this would send to your Cloudflare Worker
-        // For now, we'll just log it
-        
-        // Example WebSocket send:
-        // if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-        //     this.websocket.send(JSON.stringify(data));
-        // }
-        
-        // Example fetch to API:
-        // fetch('/api/update-state', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(data)
-        // });
+        try {
+            const response = await fetch(`${this.API_BASE}/api/state`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('State update success:', result);
+            return result;
+
+        } catch (error) {
+            console.error('State update failed:', error);
+            this.showNotification('Errore di connessione al server', 'error');
+            return null;
+        }
     }
 
-    sendAIAction(action, data) {
-        console.log('AI Action:', action, data);
-        // Similar to sendStateUpdate but for AI-specific actions
+    async sendVoteAction(action, data = {}) {
+        try {
+            const response = await fetch(`${this.API_BASE}/api/vote`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, ...data })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Vote API error: ${response.status}`);
+            }
+
+            return await response.json();
+
+        } catch (error) {
+            console.error('Vote action failed:', error);
+            this.showNotification('Errore gestione voti', 'error');
+            return null;
+        }
+    }
+
+    async sendAIAction(action, data) {
+        try {
+            const response = await fetch(`${this.API_BASE}/api/ai`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, ...data })
+            });
+
+            if (!response.ok) {
+                throw new Error(`AI API error: ${response.status}`);
+            }
+
+            return await response.json();
+
+        } catch (error) {
+            console.error('AI action failed:', error);
+            this.showNotification('Errore gestione AI requests', 'error');
+            return null;
+        }
+    }
+
+    async loadVoteResults() {
+        try {
+            const response = await fetch(`${this.API_BASE}/api/vote`);
+            if (response.ok) {
+                const voteData = await response.json();
+                if (voteData.votes && voteData.songs) {
+                    const results = this.calculateResults(voteData);
+                    this.updateVoteResults(results);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load vote results:', error);
+        }
+    }
+
+    async loadAIQueue() {
+        try {
+            const response = await fetch(`${this.API_BASE}/api/ai`);
+            if (response.ok) {
+                const queueData = await response.json();
+                this.updateAIQueue(queueData.requests || []);
+            }
+        } catch (error) {
+            console.error('Failed to load AI queue:', error);
+        }
+    }
+
+    calculateResults(voteData) {
+        const songCounts = {};
+        const songNames = voteData.songs;
+
+        songNames.forEach((song, index) => {
+            songCounts[index] = 0;
+        });
+
+        Object.values(voteData.votes).forEach(vote => {
+            if (songCounts.hasOwnProperty(vote.songIndex)) {
+                songCounts[vote.songIndex]++;
+            }
+        });
+
+        const results = songNames.map((name, index) => {
+            const votes = songCounts[index] || 0;
+            const percentage = voteData.totalVotes > 0 ? 
+                Math.round((votes / voteData.totalVotes) * 100) : 0;
+            
+            return { name, votes, percentage };
+        });
+
+        return {
+            results: results,
+            totalVotes: voteData.totalVotes,
+            lastUpdate: Date.now()
+        };
+    }
+
+    updateAIQueue(requests) {
+        const queueContainer = document.getElementById('aiQueue');
+        
+        if (!requests || requests.length === 0) {
+            queueContainer.innerHTML = '<div class="no-requests">Nessuna richiesta in coda</div>';
+            return;
+        }
+
+        queueContainer.innerHTML = requests.map(request => `
+            <div class="queue-item" data-request-id="${request.id}">
+                <div class="request-info">
+                    <div class="request-text">${request.text}</div>
+                    <div class="request-meta">Da: ${request.userName} • ${this.formatTimeAgo(request.timestamp)} • Mood: ${request.mood}</div>
+                </div>
+                <div class="request-actions">
+                    <button class="btn-approve">✅</button>
+                    <button class="btn-reject">❌</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    formatTimeAgo(timestamp) {
+        const seconds = Math.floor((Date.now() - timestamp) / 1000);
+        if (seconds < 60) return 'ora';
+        const minutes = Math.floor(seconds / 60);
+        return `${minutes} min fa`;
     }
 }
 

@@ -6,8 +6,8 @@ compatibility_flags = ["nodejs_compat"]
 # KV Namespace for state storage
 [[kv_namespaces]]
 binding = "LIVE_STATE"
-id = "your-kv-namespace-id"
-preview_id = "your-preview-kv-namespace-id"
+id = "f8d558c581a34c65950d92f017e180a8"
+preview_id = "56e1980cb6394a87b04baf0bf34c8823"
 
 # Environment variables
 [vars]
