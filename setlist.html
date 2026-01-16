@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TheCenti - Setlist Cluster Analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #1a0b3d 0%, #2d1b5e 50%, #0f051f 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 700;
+            background: linear-gradient(45deg, #ff6b35, #f7931e, #ffd23f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(255, 107, 53, 0.3);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #b8a9ff;
+            font-weight: 500;
+        }
+
+        .cluster-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            padding: 20px 15px;
+            text-align: center;
+            font-family: 'Syne', sans-serif;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        th.cluster-header {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+            width: 150px;
+        }
+
+        th.mood-header {
+            background: linear-gradient(135deg, #6b73ff, #9b59b6);
+            color: white;
+        }
+
+        td {
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            vertical-align: top;
+        }
+
+        .cluster-name {
+            font-family: 'Syne', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .song-list {
+            line-height: 1.6;
+            color: #e1d9ff;
+        }
+
+        .song {
+            display: block;
+            margin-bottom: 8px;
+            padding: 6px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            border-left: 3px solid;
+            transition: all 0.3s ease;
+        }
+
+        .song:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .cluster-italia .song { border-color: #27ae60; }
+        .cluster-80s .song { border-color: #e74c3c; }
+        .cluster-boyband .song { border-color: #f39c12; }
+        .cluster-dance .song { border-color: #9b59b6; }
+        .cluster-rock .song { border-color: #e67e22; }
+        .cluster-ballad .song { border-color: #3498db; }
+        .cluster-filler .song { border-color: #95a5a6; }
+        .cluster-revival .song { border-color: #8e44ad; }
+
+        .frequency {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-left: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .cluster-grid {
+                padding: 20px;
+            }
+            
+            table {
+                font-size: 0.8rem;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>TheCenti</h1>
+        <p class="subtitle">Cluster Analysis • Setlist Intelligente</p>
+    </div>
+
+    <div class="cluster-grid">
+        <table>
+            <thead>
+                <tr>
+                    <th class="cluster-header">Cluster</th>
+                    <th class="mood-header">🎤 Cantare</th>
+                    <th class="mood-header">💃 Ballare</th>
+                    <th class="mood-header">🎧 Ascoltare</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="cluster-italia">
+                    <td class="cluster-name">ITALIA<br><small>30.1%</small></td>
+                    <td class="song-list">
+                        <span class="song">Il Battito Animale <span class="frequency">(9x)</span></span>
+                        <span class="song">Salirò <span class="frequency">(8x)</span></span>
+                        <span class="song">Destinazione Paradiso <span class="frequency">(8x)</span></span>
+                        <span class="song">Le Ragazze <span class="frequency">(7x)</span></span>
+                        <span class="song">Guarda Che Luna <span class="frequency">(7x)</span></span>
+                        <span class="song">La Mia Storia Tra Le Dita <span class="frequency">(6x)</span></span>
+                        <span class="song">A Me Me Piace O Blues <span class="frequency">(6x)</span></span>
+                        <span class="song">Disperato Erotico Stomp <span class="frequency">(6x)</span></span>
+                        <span class="song">Frasi Da Dimenticare <span class="frequency">(6x)</span></span>
+                        <span class="song">A Mano A Mano <span class="frequency">(5x)</span></span>
+                        <span class="song">Je So Pazzo <span class="frequency">(5x)</span></span>
+                        <span class="song">Quanno Chiove <span class="frequency">(5x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Voglio Vederti Danzare <span class="frequency">(9x)</span></span>
+                        <span class="song">Ahi Maria <span class="frequency">(9x)</span></span>
+                        <span class="song">Maracaibo <span class="frequency">(7x)</span></span>
+                        <span class="song">Nord Sud Ovest Est <span class="frequency">(3x)</span></span>
+                        <span class="song">Con Un Deca <span class="frequency">(3x)</span></span>
+                        <span class="song">Gioca Jouer <span class="frequency">(3x)</span></span>
+                        <span class="song">Bandiera Gialla <span class="frequency">(3x)</span></span>
+                        <span class="song">Tanti Auguri <span class="frequency">(3x)</span></span>
+                        <span class="song">Triangolo <span class="frequency">(3x)</span></span>
+                        <span class="song">Discolabirinto <span class="frequency">(2x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Vita <span class="frequency">(2x)</span></span>
+                        <span class="song">Mentre Dormi <span class="frequency">(1x)</span></span>
+                        <span class="song">Fossi Figo <span class="frequency">(1x)</span></span>
+                        <span class="song">Life Is Sweet <span class="frequency">(1x)</span></span>
+                        <span class="song">La Dura Legge Del Gol <span class="frequency">(1x)</span></span>
+                        <span class="song">Buonasera Signorina <span class="frequency">(1x)</span></span>
+                    </td>
+                </tr>
+                
+                <tr class="cluster-80s">
+                    <td class="cluster-name">80S<br><small>11.3%</small></td>
+                    <td class="song-list">
+                        <span class="song">The Neverending Story <span class="frequency">(4x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Never Gonna Give You Up <span class="frequency">(10x)</span></span>
+                        <span class="song">All Night Long <span class="frequency">(8x)</span></span>
+                        <span class="song">Take On Me <span class="frequency">(7x)</span></span>
+                        <span class="song">Walking On Sunshine <span class="frequency">(3x)</span></span>
+                        <span class="song">Footloose <span class="frequency">(2x)</span></span>
+                        <span class="song">Thriller <span class="frequency">(2x)</span></span>
+                        <span class="song">Ghostbusters <span class="frequency">(4x)</span></span>
+                        <span class="song">Beat It <span class="frequency">(1x)</span></span>
+                        <span class="song">Billie Jean <span class="frequency">(1x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Enjoy The Silence <span class="frequency">(11x)</span></span>
+                        <span class="song">Personal Jesus <span class="frequency">(8x)</span></span>
+                        <span class="song">Ordinary World <span class="frequency">(5x)</span></span>
+                        <span class="song">Uptown Girl <span class="frequency">(4x)</span></span>
+                        <span class="song">Everybody Wants To Rule The World <span class="frequency">(4x)</span></span>
+                        <span class="song">Holding Out For A Hero <span class="frequency">(2x)</span></span>
+                    </td>
+                </tr>
+
+                <tr class="cluster-boyband">
+                    <td class="cluster-name">BOYBAND<br><small>3.8%</small></td>
+                    <td class="song-list">
+                        <span class="song">Back For Good <span class="frequency">(8x)</span></span>
+                        <span class="song">As Long As You Love Me <span class="frequency">(5x)</span></span>
+                        <span class="song">I Want It That Way <span class="frequency">(4x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Everybody Backstreets Back <span class="frequency">(4x)</span></span>
+                        <span class="song">Everybody <span class="frequency">(1x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song"></span>
+                    </td>
+                </tr>
+
+                <tr class="cluster-dance">
+                    <td class="cluster-name">DANCE<br><small>9.8%</small></td>
+                    <td class="song-list">
+                        <span class="song">Believe <span class="frequency">(4x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Maniac <span class="frequency">(9x)</span></span>
+                        <span class="song">Baby One More Time <span class="frequency">(9x)</span></span>
+                        <span class="song">Hey Brother <span class="frequency">(6x)</span></span>
+                        <span class="song">Dont You Worry Child <span class="frequency">(6x)</span></span>
+                        <span class="song">Uptown Funk <span class="frequency">(5x)</span></span>
+                        <span class="song">Dirty Dancing - Ive Had The Time Of My Life <span class="frequency">(4x)</span></span>
+                        <span class="song">Dancing In The Moonlight <span class="frequency">(4x)</span></span>
+                        <span class="song">Freed From Desire OK <span class="frequency">(4x)</span></span>
+                        <span class="song">Oops I Did It Again <span class="frequency">(3x)</span></span>
+                        <span class="song">Wake Me Up <span class="frequency">(2x)</span></span>
+                        <span class="song">Rhythm Is A Dancer <span class="frequency">(1x)</span></span>
+                        <span class="song">What Is Love <span class="frequency">(1x)</span></span>
+                        <span class="song">Lamour Toujours <span class="frequency">(1x)</span></span>
+                        <span class="song">Bad Romance <span class="frequency">(1x)</span></span>
+                        <span class="song">Stayin Alive <span class="frequency">(1x)</span></span>
+                        <span class="song">Get Lucky <span class="frequency">(1x)</span></span>
+                        <span class="song">Dont Start Now <span class="frequency">(1x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Material Girl <span class="frequency">(1x)</span></span>
+                    </td>
+                </tr>
+
+                <tr class="cluster-rock">
+                    <td class="cluster-name">ROCK<br><small>11.3%</small></td>
+                    <td class="song-list">
+                        <span class="song">Losing My Religion <span class="frequency">(8x)</span></span>
+                        <span class="song">You Get What You Give <span class="frequency">(5x)</span></span>
+                        <span class="song">Bohemian Like You <span class="frequency">(4x)</span></span>
+                        <span class="song">Can You Feel The Love Tonight <span class="frequency">(1x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Surfin USA <span class="frequency">(5x)</span></span>
+                        <span class="song">Surfin Bird <span class="frequency">(5x)</span></span>
+                        <span class="song">Believer <span class="frequency">(5x)</span></span>
+                        <span class="song">I Get Around <span class="frequency">(3x)</span></span>
+                        <span class="song">Twist And Shout <span class="frequency">(3x)</span></span>
+                        <span class="song">You Never Can Tell <span class="frequency">(3x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Heroes <span class="frequency">(5x)</span></span>
+                        <span class="song">Space Oddity <span class="frequency">(4x)</span></span>
+                        <span class="song">Wish You Were Here <span class="frequency">(3x)</span></span>
+                        <span class="song">Hotel California <span class="frequency">(3x)</span></span>
+                    </td>
+                </tr>
+
+                <tr class="cluster-ballad">
+                    <td class="cluster-name">BALLAD<br><small>14.3%</small></td>
+                    <td class="song-list">
+                        <span class="song">Africa <span class="frequency">(9x)</span></span>
+                        <span class="song">Sing <span class="frequency">(9x)</span></span>
+                        <span class="song">Lemon Tree <span class="frequency">(9x)</span></span>
+                        <span class="song">La Flaca <span class="frequency">(9x)</span></span>
+                        <span class="song">Grease - Summer Nights <span class="frequency">(9x)</span></span>
+                        <span class="song">Che Idea OK <span class="frequency">(8x)</span></span>
+                        <span class="song">Feel <span class="frequency">(6x)</span></span>
+                        <span class="song">Angels <span class="frequency">(5x)</span></span>
+                        <span class="song">Happy Together <span class="frequency">(5x)</span></span>
+                        <span class="song">California Dreamin <span class="frequency">(4x)</span></span>
+                        <span class="song">Teorema <span class="frequency">(4x)</span></span>
+                        <span class="song">Dont Worry Be Happy <span class="frequency">(4x)</span></span>
+                        <span class="song">Ci Vuole Un Fisico Bestiale <span class="frequency">(3x)</span></span>
+                        <span class="song">Banane Lampone <span class="frequency">(3x)</span></span>
+                        <span class="song">Me So Mbriacato <span class="frequency">(3x)</span></span>
+                        <span class="song">Quelli Che Benpensano <span class="frequency">(3x)</span></span>
+                        <span class="song">Sotto Casa <span class="frequency">(3x)</span></span>
+                        <span class="song">Sara Perche Ti Amo <span class="frequency">(3x)</span></span>
+                        <span class="song">Champagne Supernova <span class="frequency">(3x)</span></span>
+                        <span class="song">Live Forever <span class="frequency">(3x)</span></span>
+                        <span class="song">Sentimento Pentimento <span class="frequency">(3x)</span></span>
+                        <span class="song">Clandestino <span class="frequency">(3x)</span></span>
+                        <span class="song">Dragon Ball Z - Whats My Destiny Dragon Ball <span class="frequency">(3x)</span></span>
+                        <span class="song">Baywatch Theme - Im Always Here <span class="frequency">(2x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Livin La Vida Loca <span class="frequency">(9x)</span></span>
+                        <span class="song">Maria <span class="frequency">(5x)</span></span>
+                        <span class="song">Tappartengo <span class="frequency">(3x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Iris <span class="frequency">(6x)</span></span>
+                        <span class="song">Easy <span class="frequency">(4x)</span></span>
+                        <span class="song">Sitting On The Dock Of The Bay <span class="frequency">(4x)</span></span>
+                        <span class="song">Mykonos <span class="frequency">(2x)</span></span>
+                    </td>
+                </tr>
+
+                <tr class="cluster-filler">
+                    <td class="cluster-name">FILLER<br><small>18.0%</small></td>
+                    <td class="song-list">
+                        <span class="song">Che Idea <span class="frequency">(1x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Flashdance What A Feeling <span class="frequency">(2x)</span></span>
+                        <span class="song">Im So Excited <span class="frequency">(2x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song"></span>
+                    </td>
+                </tr>
+
+                <tr class="cluster-revival">
+                    <td class="cluster-name">REVIVAL<br><small>1.5%</small></td>
+                    <td class="song-list">
+                        <span class="song"></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song">Aquarius - Let The Sunshine In <span class="frequency">(5x)</span></span>
+                    </td>
+                    <td class="song-list">
+                        <span class="song"></span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
