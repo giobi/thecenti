@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tester Voti - TheCenti Live</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .tester-section {
+            background: rgba(255, 107, 53, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ff6b35;
+        }
+        button {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #e55a2e;
+        }
+        .result {
+            background: rgba(76, 175, 80, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            border: 1px solid #4CAF50;
+        }
+        .error {
+            background: rgba(244, 67, 54, 0.2);
+            border-color: #f44336;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #ff6b35;
+            border-radius: 5px;
+            color: white;
+        }
+        .vote-btn {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 15px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 TheCenti Live Tester</h1>
+    <p>Tool per testare il sistema di voti e AI requests in tempo reale</p>
+
+    <!-- Vote Testing -->
+    <div class="tester-section">
+        <h2>🗳️ Test Voti</h2>
+        <p>Simula voti dal pubblico:</p>
+        
+        <button class="vote-btn" onclick="simulateVote(0)">Vota: Albachiara</button>
+        <button class="vote-btn" onclick="simulateVote(1)">Vota: Vita Spericolata</button>
+        <button class="vote-btn" onclick="simulateVote(2)">Vota: Sally</button>
+        
+        <button onclick="simulateRandomVotes()">🎲 Simula 10 Voti Random</button>
+        <button onclick="checkVoteResults()">📊 Vedi Risultati</button>
+        
+        <div id="voteResult"></div>
+    </div>
+
+    <!-- AI Testing -->
+    <div class="tester-section">
+        <h2>🤖 Test AI Requests</h2>
+        
+        <input type="text" id="userName" placeholder="Nome utente" value="Tester">
+        <textarea id="aiRequest" placeholder="Richiesta per l'AI..." rows="3">Suonate qualcosa di rock per far ballare tutti!</textarea>
+        <select id="moodSelect">
+            <option value="energia">Energia</option>
+            <option value="rock">Rock</option>
+            <option value="ballad">Ballad</option>
+            <option value="dance">Dance</option>
+            <option value="generale">Generale</option>
+        </select>
+        
+        <button onclick="submitAIRequest()">📨 Invia AI Request</button>
+        <button onclick="generateRandomRequests()">🎲 Genera 5 Richieste Random</button>
+        
+        <div id="aiResult"></div>
+    </div>
+
+    <!-- System Status -->
+    <div class="tester-section">
+        <h2>⚙️ System Status</h2>
+        
+        <button onclick="checkSystemStatus()">🔍 Check Status</button>
+        <button onclick="resetAllData()">🔄 Reset Sistema</button>
+        
+        <div id="statusResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://thecenti-live-hub.giobi.workers.dev';
+
+        // Generate random client ID
+        const clientId = 'tester_' + Math.random().toString(36).substr(2, 9);
+
+        async function simulateVote(songIndex) {
+            try {
+                const response = await fetch(`${API_BASE}/api/vote`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'vote',
+                        songIndex: songIndex,
+                        clientId: clientId + '_' + Date.now() // Unique each time
+                    })
+                });
+
+                const result = await response.json();
+                document.getElementById('voteResult').innerHTML = 
+                    `<div class="result">${JSON.stringify(result, null, 2)}</div>`;
+
+            } catch (error) {
+                document.getElementById('voteResult').innerHTML = 
+                    `<div class="result error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function simulateRandomVotes() {
+            for (let i = 0; i < 10; i++) {
+                const randomSong = Math.floor(Math.random() * 3);
+                const randomClient = 'random_' + Math.random().toString(36).substr(2, 9);
+                
+                setTimeout(async () => {
+                    try {
+                        await fetch(`${API_BASE}/api/vote`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'vote',
+                                songIndex: randomSong,
+                                clientId: randomClient
+                            })
+                        });
+                    } catch (error) {
+                        console.error('Random vote error:', error);
+                    }
+                }, i * 200); // Spread votes over 2 seconds
+            }
+
+            document.getElementById('voteResult').innerHTML = 
+                '<div class="result">🎲 10 voti random inviati!</div>';
+        }
+
+        async function checkVoteResults() {
+            try {
+                const response = await fetch(`${API_BASE}/api/vote`);
+                const result = await response.json();
+                document.getElementById('voteResult').innerHTML = 
+                    `<div class="result">${JSON.stringify(result, null, 2)}</div>`;
+            } catch (error) {
+                document.getElementById('voteResult').innerHTML = 
+                    `<div class="result error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function submitAIRequest() {
+            const userName = document.getElementById('userName').value;
+            const text = document.getElementById('aiRequest').value;
+            const mood = document.getElementById('moodSelect').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/ai`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'submit_request',
+                        text: text,
+                        userName: userName,
+                        mood: mood
+                    })
+                });
+
+                const result = await response.json();
+                document.getElementById('aiResult').innerHTML = 
+                    `<div class="result">${JSON.stringify(result, null, 2)}</div>`;
+
+            } catch (error) {
+                document.getElementById('aiResult').innerHTML = 
+                    `<div class="result error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function generateRandomRequests() {
+            const requests = [
+                { text: "Suonate Vasco Rossi per favore!", mood: "rock" },
+                { text: "Qualcosa di ballabile per la mia ragazza", mood: "dance" },
+                { text: "Una canzone romantica please", mood: "ballad" },
+                { text: "Roba energica che sveglia i morti!", mood: "energia" },
+                { text: "Quello che volete, siete i migliori!", mood: "generale" }
+            ];
+
+            for (let i = 0; i < requests.length; i++) {
+                setTimeout(async () => {
+                    try {
+                        await fetch(`${API_BASE}/api/ai`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'submit_request',
+                                text: requests[i].text,
+                                userName: `Fan${i + 1}`,
+                                mood: requests[i].mood
+                            })
+                        });
+                    } catch (error) {
+                        console.error('Random request error:', error);
+                    }
+                }, i * 300);
+            }
+
+            document.getElementById('aiResult').innerHTML = 
+                '<div class="result">🎲 5 AI requests random generate!</div>';
+        }
+
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/state`);
+                const result = await response.json();
+                document.getElementById('statusResult').innerHTML = 
+                    `<div class="result">${JSON.stringify(result, null, 2)}</div>`;
+            } catch (error) {
+                document.getElementById('statusResult').innerHTML = 
+                    `<div class="result error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function resetAllData() {
+            try {
+                // Reset state
+                await fetch(`${API_BASE}/api/state`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ voteOpen: false, aiEnabled: false })
+                });
+
+                document.getElementById('statusResult').innerHTML = 
+                    '<div class="result">🔄 Sistema resettato!</div>';
+            } catch (error) {
+                document.getElementById('statusResult').innerHTML = 
+                    `<div class="result error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-check status on load
+        document.addEventListener('DOMContentLoaded', () => {
+            checkSystemStatus();
+        });
+    </script>
+</body>
+</html>
