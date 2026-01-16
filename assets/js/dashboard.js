@@ -7,10 +7,13 @@ class TheCentiDashboard {
             aiEnabled: false,
             connected: false,
             timer: null,
-            countdown: 0
+            countdown: 0,
+            currentCluster: null,
+            currentOptions: []
         };
         
         this.websocket = null;
+        this.setlistData = null;
         this.init();
     }
 
@@ -27,6 +30,10 @@ class TheCentiDashboard {
         
         // Timer controls
         document.getElementById('startTimer').addEventListener('click', () => this.startTimer());
+        
+        // Cluster selector
+        document.getElementById('clusterSelect').addEventListener('change', (e) => this.onClusterChange(e));
+        document.getElementById('generateSongs').addEventListener('click', () => this.generateRandomSongs());
         
         // Quick actions
         document.getElementById('resetAll').addEventListener('click', () => this.resetAll());
@@ -61,6 +68,9 @@ class TheCentiDashboard {
         this.updateVoteStatus(false);
         this.updateAIStatus(false);
         this.updateTimerDisplay('--:--');
+        
+        // Load setlist data for cluster management
+        this.loadSetlistData();
     }
 
     // WebSocket Connection
@@ -138,6 +148,9 @@ class TheCentiDashboard {
             this.state.voteOpen = newState;
             this.updateVoteStatus(newState);
             this.updateToggleButton('toggleVote', newState, 'APRI VOTI', 'CHIUDI VOTI');
+            
+            // Update NEXT buttons visibility
+            this.updateNextButtonsVisibility();
             
             if (newState) {
                 this.showNotification('✅ Votazione APERTA! Il pubblico può ora votare.', 'success');
@@ -621,6 +634,180 @@ class TheCentiDashboard {
         if (seconds < 60) return 'ora';
         const minutes = Math.floor(seconds / 60);
         return `${minutes} min fa`;
+    }
+
+    // Cluster Management Methods
+    async loadSetlistData() {
+        try {
+            const response = await fetch('../setlist.json');
+            if (response.ok) {
+                this.setlistData = await response.json();
+                console.log('Setlist data loaded:', this.setlistData.length, 'songs');
+            } else {
+                throw new Error('Failed to load setlist.json');
+            }
+        } catch (error) {
+            console.error('Error loading setlist data:', error);
+            this.showNotification('Errore caricamento dati setlist', 'error');
+        }
+    }
+
+    onClusterChange(event) {
+        const cluster = event.target.value;
+        this.state.currentCluster = cluster;
+        
+        // Update cluster status
+        const statusBadge = document.getElementById('clusterStatus').querySelector('.status-badge');
+        if (cluster) {
+            statusBadge.textContent = cluster.toUpperCase();
+            statusBadge.className = 'status-badge open';
+        } else {
+            statusBadge.textContent = 'NESSUNO';
+            statusBadge.className = 'status-badge';
+        }
+        
+        // Hide vote options when cluster changes
+        document.getElementById('voteOptions').style.display = 'none';
+    }
+
+    async generateRandomSongs() {
+        if (!this.state.currentCluster) {
+            this.showNotification('⚠️ Seleziona prima un cluster!', 'warning');
+            return;
+        }
+
+        if (!this.setlistData) {
+            await this.loadSetlistData();
+        }
+
+        const clusterSongs = this.getSongsByCluster(this.state.currentCluster);
+        
+        if (clusterSongs.length < 3) {
+            this.showNotification(`⚠️ Il cluster ${this.state.currentCluster} ha solo ${clusterSongs.length} canzoni!`, 'warning');
+            return;
+        }
+
+        // Generate 3 random songs
+        const randomSongs = this.getRandomSongs(clusterSongs, 3);
+        this.state.currentOptions = randomSongs;
+        
+        // Display the options
+        this.displayVoteOptions(randomSongs);
+        
+        // Show the vote options section
+        document.getElementById('voteOptions').style.display = 'block';
+        
+        this.showNotification(`🎲 Generate 3 canzoni dal cluster ${this.state.currentCluster.toUpperCase()}`, 'success');
+    }
+
+    getSongsByCluster(cluster) {
+        if (!this.setlistData) return [];
+        
+        // Define cluster filters based on our analysis
+        const clusterFilters = {
+            'italia': song => song.genre.includes('italiano') || song.genre.includes('italiano-'),
+            '80s': song => song.genre.includes('80s'),
+            'boyband': song => song.genre === '90s-pop' && (
+                song.author.includes('Backstreet') || 
+                song.author.includes('Take That') || 
+                song.author.includes('NSYNC') ||
+                song.name.includes('Back For Good') ||
+                song.name.includes('I Want It That Way')
+            ),
+            'dance': song => song.genre.includes('edm') || 
+                           song.genre.includes('dance') || 
+                           song.genre.includes('disco') ||
+                           song.vibe === 'ballare',
+            'rock': song => song.genre.includes('rock') && 
+                          !song.name.includes('Africa') && 
+                          !song.name.includes('Feel') &&
+                          !song.name.includes('Angels'),
+            'ballad': song => song.name === 'Africa' || 
+                            song.name === 'Feel' || 
+                            song.name === 'Angels' || 
+                            song.name === 'California Dreamin' ||
+                            song.name === 'Iris' ||
+                            song.vibe === 'cantare' && song.frequency >= 6,
+            'filler': song => !song.genre.includes('italiano') && 
+                            !song.genre.includes('80s') && 
+                            !song.genre.includes('rock') &&
+                            song.vibe === 'ballare',
+            'revival': song => song.genre.includes('60s') || 
+                             song.name.includes('Aquarius') ||
+                             song.name.includes('Happy Together')
+        };
+
+        const filter = clusterFilters[cluster];
+        if (!filter) return [];
+
+        return this.setlistData.filter(filter);
+    }
+
+    getRandomSongs(songs, count) {
+        const shuffled = [...songs].sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, count);
+    }
+
+    displayVoteOptions(songs) {
+        const optionList = document.getElementById('optionList');
+        
+        optionList.innerHTML = songs.map((song, index) => `
+            <div class="vote-option" data-song-index="${index}">
+                <div class="song-info">
+                    <div class="song-title">${song.name}</div>
+                    <div class="song-meta">${song.author} • ${song.genre} • ${song.frequency}x</div>
+                </div>
+                <div class="song-actions">
+                    <button class="btn-next" onclick="dashboard.replaceSong(${index})">
+                        🔄 NEXT
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        // Update voting state visibility
+        this.updateNextButtonsVisibility();
+    }
+
+    replaceSong(songIndex) {
+        if (!this.state.currentCluster || !this.setlistData) return;
+
+        const clusterSongs = this.getSongsByCluster(this.state.currentCluster);
+        
+        // Get current songs to avoid duplicates
+        const currentSongIds = this.state.currentOptions.map(song => song.id);
+        
+        // Filter out current songs
+        const availableSongs = clusterSongs.filter(song => !currentSongIds.includes(song.id));
+        
+        if (availableSongs.length === 0) {
+            this.showNotification('⚠️ Nessun altro pezzo disponibile in questo cluster!', 'warning');
+            return;
+        }
+
+        // Pick a random replacement
+        const randomSong = availableSongs[Math.floor(Math.random() * availableSongs.length)];
+        
+        // Replace the song
+        this.state.currentOptions[songIndex] = randomSong;
+        
+        // Re-display options
+        this.displayVoteOptions(this.state.currentOptions);
+        
+        this.showNotification(`🔄 Sostituito: ${randomSong.name}`, 'info');
+    }
+
+    updateNextButtonsVisibility() {
+        const voteOptions = document.getElementById('voteOptions');
+        const nextButtons = document.querySelectorAll('.btn-next');
+        
+        if (this.state.voteOpen) {
+            voteOptions.classList.add('voting-active');
+            nextButtons.forEach(btn => btn.style.display = 'none');
+        } else {
+            voteOptions.classList.remove('voting-active');
+            nextButtons.forEach(btn => btn.style.display = 'block');
+        }
     }
 }
 

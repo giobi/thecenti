@@ -21,6 +21,40 @@
 
     <main class="dashboard-main">
         <div class="container">
+            <!-- Cluster Selector Section -->
+            <section class="control-section">
+                <div class="section-header">
+                    <h2>🎵 Seleziona Cluster</h2>
+                    <div class="section-status" id="clusterStatus">
+                        <span class="status-badge">NESSUNO</span>
+                    </div>
+                </div>
+                
+                <div class="control-panel">
+                    <div class="cluster-selector">
+                        <select id="clusterSelect" class="cluster-select">
+                            <option value="">-- Scegli Cluster --</option>
+                            <option value="italia">🇮🇹 ITALIA (30.1%)</option>
+                            <option value="80s">🎹 80S (11.3%)</option>
+                            <option value="boyband">👦 BOYBAND (3.8%)</option>
+                            <option value="dance">💃 DANCE (9.8%)</option>
+                            <option value="rock">🎸 ROCK (11.3%)</option>
+                            <option value="ballad">🎤 BALLAD (14.3%)</option>
+                            <option value="filler">📻 FILLER (18.0%)</option>
+                            <option value="revival">🌟 REVIVAL (1.5%)</option>
+                        </select>
+                        <button class="btn-generate" id="generateSongs">🎲 Genera 3 Canzoni</button>
+                    </div>
+                    
+                    <div class="vote-options" id="voteOptions" style="display: none;">
+                        <h3>Opzioni di Voto</h3>
+                        <div class="option-list" id="optionList">
+                            <!-- Le 3 opzioni verranno generate dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Vote Control Section -->
             <section class="control-section">
                 <div class="section-header">
