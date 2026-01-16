@@ -156,35 +156,11 @@
                 Tempo rimasto: <span id="timer">02:45</span>
             </div>
             
-            <div class="vote-options">
-                <div class="vote-option" data-song="battito-animale">
-                    <div class="vote-percentage">23%</div>
-                    <h3>Battito Animale</h3>
-                    <p class="artist">Raf</p>
-                    <p class="description">
-                        Il classico anni '80 che fa scatenare tutti! Perfetto per far ballare 
-                        anche i più timidi. Cecco ci mette sempre gli effetti vocali bizzarri.
-                    </p>
-                </div>
-                
-                <div class="vote-option" data-song="el-pube">
-                    <div class="vote-percentage">45%</div>
-                    <h3>El Pube</h3>
-                    <p class="artist">Manu Chao</p>
-                    <p class="description">
-                        Ritmo latino irresistibile che trasforma qualsiasi serata in festa! 
-                        Mauro si scatena con le percussioni e il pubblico canta a squarciagola.
-                    </p>
-                </div>
-                
-                <div class="vote-option" data-song="sweet-child">
-                    <div class="vote-percentage">32%</div>
-                    <h3>Sweet Child O' Mine</h3>
-                    <p class="artist">Guns N' Roses</p>
-                    <p class="description">
-                        Rock potente che sveglia i morti! Giobi si esibisce nel solo di chitarra 
-                        mentre gli altri due fanno cori epici. Momento clou garantito!
-                    </p>
+            <div class="vote-options" id="voteOptions">
+                <!-- Le opzioni di voto saranno caricate dinamicamente dall'API -->
+                <div class="loading-message" style="text-align: center; padding: 2rem; color: var(--text-gray);">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <p>Caricamento opzioni di voto...</p>
                 </div>
             </div>
             
@@ -218,25 +194,103 @@
             }
 
             async init() {
-                this.bindEvents();
                 await this.checkVotingStatus();
-                await this.loadVoteResults();
+                await this.loadVoteOptions();
+                this.bindEvents();
                 this.startPolling();
             }
 
-            bindEvents() {
-                const voteOptions = document.querySelectorAll('.vote-option');
-                const voteBtn = document.getElementById('vote-btn');
+            async loadVoteOptions() {
+                try {
+                    const response = await fetch(`${this.API_BASE}/api/vote`);
+                    const voteData = await response.json();
+                    
+                    if (voteData.songs && voteData.songs.length > 0) {
+                        this.renderVoteOptions(voteData.songs);
+                        this.updateVoteResults(this.calculateResults(voteData));
+                    } else {
+                        // Fallback se non ci sono dati
+                        this.renderNoVotingMessage();
+                    }
+                    
+                } catch (error) {
+                    console.error('Failed to load vote options:', error);
+                    this.renderErrorMessage();
+                }
+            }
 
+            renderVoteOptions(songs) {
+                const voteOptionsContainer = document.getElementById('voteOptions');
+                
+                voteOptionsContainer.innerHTML = songs.map((song, index) => `
+                    <div class="vote-option" data-song-index="${index}">
+                        <div class="vote-percentage">0%</div>
+                        <h3>${song}</h3>
+                        <p class="artist">TheCenti Live</p>
+                        <p class="description">
+                            Vota per sentire questa canzone nel prossimo set! 
+                            Il pubblico decide e la band suona. Rock democracy in azione! 🎸
+                        </p>
+                    </div>
+                `).join('');
+
+                // Rebind events after creating elements
+                this.bindVoteOptionEvents();
+            }
+
+            renderNoVotingMessage() {
+                const voteOptionsContainer = document.getElementById('voteOptions');
+                voteOptionsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--text-gray);">
+                        <h3>🎸 Nessuna votazione attiva</h3>
+                        <p>La band sta preparando le prossime opzioni di voto...</p>
+                        <p style="font-size: 0.9rem; margin-top: 1rem;">
+                            Torna tra qualche minuto o aspetta che aprano i voti dal palco!
+                        </p>
+                    </div>
+                `;
+                
+                this.disableVoting();
+            }
+
+            renderErrorMessage() {
+                const voteOptionsContainer = document.getElementById('voteOptions');
+                voteOptionsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--accent-red);">
+                        <h3>⚠️ Errore di Connessione</h3>
+                        <p>Non riesco a caricare le opzioni di voto...</p>
+                        <button onclick="window.location.reload()" style="
+                            background: var(--accent-red); 
+                            color: white; 
+                            border: none; 
+                            padding: 1rem 2rem; 
+                            border-radius: 10px; 
+                            margin-top: 1rem; 
+                            cursor: pointer;
+                        ">🔄 Riprova</button>
+                    </div>
+                `;
+            }
+
+            bindVoteOptionEvents() {
+                const voteOptions = document.querySelectorAll('.vote-option');
                 voteOptions.forEach((option, index) => {
                     option.addEventListener('click', () => {
                         this.selectSong(index, option);
                     });
                 });
+            }
 
-                voteBtn.addEventListener('click', () => {
-                    this.submitVote();
-                });
+            bindEvents() {
+                // Solo il bottone vote che esiste sempre
+                const voteBtn = document.getElementById('vote-btn');
+                if (voteBtn) {
+                    voteBtn.addEventListener('click', () => {
+                        this.submitVote();
+                    });
+                }
+                
+                // Le vote options saranno bind dopo il caricamento dinamico
             }
 
             selectSong(songIndex, optionElement) {

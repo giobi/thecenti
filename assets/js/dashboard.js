@@ -123,8 +123,16 @@ class TheCentiDashboard {
     async toggleVote() {
         const newState = !this.state.voteOpen;
         
-        const action = newState ? 'start_vote' : 'close_vote';
-        const result = await this.sendVoteAction(action);
+        let result;
+        if (newState) {
+            // Opening vote - send default songs
+            result = await this.sendVoteAction('start_vote', {
+                songs: ['Albachiara', 'Vita Spericolata', 'Sally']
+            });
+        } else {
+            // Closing vote
+            result = await this.sendVoteAction('close_vote');
+        }
         
         if (result) {
             this.state.voteOpen = newState;
