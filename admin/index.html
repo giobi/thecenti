@@ -138,6 +138,27 @@
                         🚨 Stop Emergenza
                     </button>
                 </div>
+
+                <!-- Quick QR Display -->
+                <div class="quick-qr-section" style="margin-top: 2rem;">
+                    <h3 style="color: #ff6b35; margin-bottom: 1rem;">📱 QR Codes per il Pubblico</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div style="text-align: center;">
+                            <h4>🗳️ Vota</h4>
+                            <div id="quickVoteQR" style="margin: 0 auto; width: 150px; height: 150px; border: 2px solid #ff6b35; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: white; color: #333;">
+                                QR Voti
+                            </div>
+                            <p style="font-size: 0.8rem; margin-top: 0.5rem;">Scansiona per votare</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <h4>🤖 AI Request</h4>
+                            <div id="quickAIQR" style="margin: 0 auto; width: 150px; height: 150px; border: 2px solid #ff6b35; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: white; color: #333;">
+                                QR AI
+                            </div>
+                            <p style="font-size: 0.8rem; margin-top: 0.5rem;">Scansiona per richieste</p>
+                        </div>
+                    </div>
+                </div>
             </section>
         </div>
     </main>
@@ -154,7 +175,7 @@
                         <!-- QR code will be generated here -->
                         <div class="qr-placeholder">QR Code Voti</div>
                     </div>
-                    <p>thecenti.live/vote</p>
+                    <p>giobi.github.io/thecenti/live/vote.html</p>
                 </div>
                 <div class="qr-item">
                     <h3>Richiedi Canzone all'AI</h3>
@@ -162,12 +183,81 @@
                         <!-- QR code will be generated here -->
                         <div class="qr-placeholder">QR Code AI</div>
                     </div>
-                    <p>thecenti.live/request</p>
+                    <p>giobi.github.io/thecenti/live/request.html</p>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="../assets/js/dashboard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script>
+        // QR Code generation when modal opens
+        document.getElementById('showQR').addEventListener('click', function() {
+            generateQRCodes();
+        });
+
+        function generateQRCodes() {
+            const voteURL = 'https://giobi.github.io/thecenti/live/vote.html';
+            const aiURL = 'https://giobi.github.io/thecenti/live/request.html';
+            
+            // Generate Vote QR (Modal)
+            const voteQR = document.getElementById('voteQR');
+            voteQR.innerHTML = '';
+            QRCode.toCanvas(voteQR, voteURL, {
+                width: 200,
+                margin: 2,
+                color: { dark: '#000000', light: '#FFFFFF' }
+            }, function (error) {
+                if (error) {
+                    voteQR.innerHTML = '<div class="qr-error">Errore generazione QR</div>';
+                }
+            });
+            
+            // Generate AI QR (Modal)
+            const aiQR = document.getElementById('aiQR');
+            aiQR.innerHTML = '';
+            QRCode.toCanvas(aiQR, aiURL, {
+                width: 200,
+                margin: 2,
+                color: { dark: '#000000', light: '#FFFFFF' }
+            }, function (error) {
+                if (error) {
+                    aiQR.innerHTML = '<div class="qr-error">Errore generazione QR</div>';
+                }
+            });
+
+            // Generate Quick Vote QR
+            const quickVoteQR = document.getElementById('quickVoteQR');
+            quickVoteQR.innerHTML = '';
+            QRCode.toCanvas(quickVoteQR, voteURL, {
+                width: 150,
+                margin: 1,
+                color: { dark: '#000000', light: '#FFFFFF' }
+            }, function (error) {
+                if (error) {
+                    quickVoteQR.innerHTML = 'QR Error';
+                }
+            });
+
+            // Generate Quick AI QR  
+            const quickAIQR = document.getElementById('quickAIQR');
+            quickAIQR.innerHTML = '';
+            QRCode.toCanvas(quickAIQR, aiURL, {
+                width: 150,
+                margin: 1,
+                color: { dark: '#000000', light: '#FFFFFF' }
+            }, function (error) {
+                if (error) {
+                    quickAIQR.innerHTML = 'QR Error';
+                }
+            });
+        }
+
+        // Generate QR codes on page load for immediate availability
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(generateQRCodes, 2000); // Generate after dashboard loads
+        });
+    </script>
 </body>
 </html>
