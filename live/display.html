@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display Mode | TheCenti Live</title>
+    <meta name="description" content="Modalità proiezione per seguire la scaletta in tempo reale durante il live dei TheCenti">
+    
+    <link rel="icon" href="../assets/images/favicon.png" type="image/png">
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background: var(--bg-dark);
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: var(--font-display);
+        }
+        
+        .display-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            background: linear-gradient(45deg, var(--bg-dark), var(--bg-stage));
+        }
+        
+        .current-song {
+            margin-bottom: var(--space-xxl);
+        }
+        
+        .song-title {
+            font-size: clamp(3rem, 8vw, 8rem);
+            font-weight: 800;
+            color: var(--accent-gold);
+            text-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
+            margin-bottom: var(--space-md);
+            line-height: 0.9;
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+        
+        .song-artist {
+            font-size: clamp(1.5rem, 4vw, 4rem);
+            color: var(--text-light);
+            font-weight: 600;
+            margin-bottom: var(--space-lg);
+            opacity: 0.8;
+        }
+        
+        .song-status {
+            font-size: clamp(1rem, 3vw, 2.5rem);
+            color: var(--accent-red);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes glow {
+            0% { text-shadow: 0 0 20px rgba(255, 215, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.3); }
+            100% { text-shadow: 0 0 40px rgba(255, 215, 0, 0.8), 0 0 80px rgba(255, 215, 0, 0.4); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .next-songs {
+            position: absolute;
+            bottom: var(--space-xxl);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 800px;
+        }
+        
+        .next-songs h3 {
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            color: var(--accent-purple);
+            margin-bottom: var(--space-lg);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .next-list {
+            display: flex;
+            gap: var(--space-lg);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .next-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            padding: var(--space-md) var(--space-lg);
+            min-width: 200px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .next-item-title {
+            font-size: clamp(0.9rem, 2vw, 1.3rem);
+            color: var(--accent-gold);
+            font-weight: 600;
+            margin-bottom: var(--space-xs);
+        }
+        
+        .next-item-artist {
+            font-size: clamp(0.8rem, 1.5vw, 1rem);
+            color: var(--text-gray);
+            font-weight: 400;
+        }
+        
+        .vote-indicator {
+            position: absolute;
+            top: var(--space-xl);
+            right: var(--space-xl);
+            background: rgba(139, 92, 246, 0.15);
+            border: 2px solid var(--accent-purple);
+            border-radius: 20px;
+            padding: var(--space-md) var(--space-lg);
+            backdrop-filter: blur(10px);
+        }
+        
+        .vote-indicator h4 {
+            color: var(--accent-purple);
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            margin-bottom: var(--space-sm);
+            text-transform: uppercase;
+        }
+        
+        .vote-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-xs);
+            font-size: clamp(0.8rem, 1.5vw, 1rem);
+        }
+        
+        .vote-percentage {
+            background: var(--accent-purple);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+        }
+        
+        .qr-code {
+            position: absolute;
+            top: var(--space-xl);
+            left: var(--space-xl);
+            background: white;
+            padding: var(--space-md);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .qr-code img {
+            width: clamp(80px, 15vw, 150px);
+            height: auto;
+            display: block;
+        }
+        
+        .qr-code p {
+            color: var(--bg-dark);
+            font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+            font-weight: 600;
+            margin-top: var(--space-sm);
+            margin-bottom: 0;
+            text-align: center;
+        }
+        
+        .ai-status {
+            position: absolute;
+            bottom: var(--space-xl);
+            right: var(--space-xl);
+            background: rgba(139, 92, 246, 0.2);
+            border: 2px solid var(--accent-purple);
+            border-radius: 15px;
+            padding: var(--space-md);
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+        }
+        
+        .ai-status h4 {
+            color: var(--accent-purple);
+            font-size: clamp(0.9rem, 2vw, 1.2rem);
+            margin-bottom: var(--space-sm);
+        }
+        
+        .ai-status p {
+            color: var(--text-light);
+            font-size: clamp(0.8rem, 1.5vw, 1rem);
+            margin: 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin: var(--space-sm) 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, var(--accent-purple), var(--accent-red));
+            border-radius: 2px;
+            width: 0%;
+            transition: width 1s ease;
+            animation: ai-progress 3s ease-in-out infinite;
+        }
+        
+        @keyframes ai-progress {
+            0%, 100% { width: 45%; }
+            50% { width: 75%; }
+        }
+        
+        /* Special effects */
+        .sparkles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .sparkle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--accent-gold);
+            border-radius: 50%;
+            animation: sparkle-float 6s linear infinite;
+        }
+        
+        @keyframes sparkle-float {
+            0% {
+                opacity: 0;
+                transform: translateY(100vh) scale(0);
+            }
+            10% {
+                opacity: 1;
+                transform: translateY(90vh) scale(1);
+            }
+            90% {
+                opacity: 1;
+                transform: translateY(10vh) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(0) scale(0);
+            }
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .vote-indicator, .ai-status {
+                position: relative;
+                margin: var(--space-md) auto;
+                max-width: 90%;
+            }
+            
+            .qr-code {
+                position: relative;
+                margin: var(--space-md) auto;
+                display: inline-block;
+            }
+            
+            .next-songs {
+                position: relative;
+                bottom: auto;
+                margin-top: var(--space-xl);
+            }
+            
+            .display-container {
+                overflow-y: auto;
+                padding: var(--space-lg);
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sparkles" id="sparkles"></div>
+    
+    <div class="display-container">
+        <!-- QR Code for participation -->
+        <div class="qr-code">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='white'/%3E%3Ctext x='75' y='80' font-family='Arial' font-size='12' text-anchor='middle' fill='black'%3EQRCODE%3C/text%3E%3Ctext x='75' y='100' font-family='Arial' font-size='8' text-anchor='middle' fill='gray'%3EPartecipa!%3C/text%3E%3C/svg%3E" alt="QR Code">
+            <p>Scansiona per partecipare!</p>
+        </div>
+        
+        <!-- Vote indicator -->
+        <div class="vote-indicator" id="votePanel">
+            <h4>🗳️ Voto in Corso</h4>
+            <div class="vote-option">
+                <span>El Pube</span>
+                <span class="vote-percentage">45%</span>
+            </div>
+            <div class="vote-option">
+                <span>Sweet Child</span>
+                <span class="vote-percentage">32%</span>
+            </div>
+            <div class="vote-option">
+                <span>Battito Animale</span>
+                <span class="vote-percentage">23%</span>
+            </div>
+        </div>
+        
+        <!-- Current song display -->
+        <div class="current-song">
+            <div class="song-title" id="currentTitle">My Sharona</div>
+            <div class="song-artist" id="currentArtist">The Knack</div>
+            <div class="song-status" id="songStatus">🎸 Suonando Ora</div>
+        </div>
+        
+        <!-- Next songs -->
+        <div class="next-songs">
+            <h3>⏭️ Prossime Canzoni</h3>
+            <div class="next-list" id="nextList">
+                <div class="next-item">
+                    <div class="next-item-title">Roxanne</div>
+                    <div class="next-item-artist">The Police</div>
+                </div>
+                <div class="next-item">
+                    <div class="next-item-title">I Love Rock 'n Roll</div>
+                    <div class="next-item-artist">Joan Jett</div>
+                </div>
+                <div class="next-item">
+                    <div class="next-item-title">🗳️ Voto Pubblico</div>
+                    <div class="next-item-artist">El Pube vs Sweet Child</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AI Status -->
+        <div class="ai-status" id="aiStatus">
+            <h4>🤖 AI in Azione</h4>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <p>Generando "Ballata di Marco" per il compleanno...</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentTitle = document.getElementById('currentTitle');
+            const currentArtist = document.getElementById('currentArtist');
+            const songStatus = document.getElementById('songStatus');
+            const nextList = document.getElementById('nextList');
+            const votePanel = document.getElementById('votePanel');
+            const aiStatus = document.getElementById('aiStatus');
+            
+            // Sample setlist data
+            const setlist = [
+                { title: "My Sharona", artist: "The Knack", status: "current" },
+                { title: "Roxanne", artist: "The Police", status: "next" },
+                { title: "I Love Rock 'n Roll", artist: "Joan Jett", status: "next" },
+                { title: "El Pube", artist: "Manu Chao", status: "vote" },
+                { title: "Sweet Child O' Mine", artist: "Guns N' Roses", status: "vote" },
+                { title: "Never Gonna Give You Up", artist: "Rick Astley", status: "upcoming" },
+                { title: "Disperato Erotico Stomp", artist: "Lucio Dalla", status: "upcoming" }
+            ];
+            
+            let currentIndex = 0;
+            let voteResults = { "El Pube": 45, "Sweet Child O' Mine": 32, "Battito Animale": 23 };
+            
+            // Create sparkles
+            function createSparkle() {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.style.left = Math.random() * 100 + '%';
+                sparkle.style.animationDelay = Math.random() * 6 + 's';
+                document.getElementById('sparkles').appendChild(sparkle);
+                
+                setTimeout(() => sparkle.remove(), 6000);
+            }
+            
+            // Create sparkles periodically
+            setInterval(createSparkle, 1000);
+            
+            // Simulate live progression
+            function advanceSong() {
+                currentIndex++;
+                if (currentIndex >= setlist.length) {
+                    currentIndex = 0; // Loop back
+                }
+                
+                const current = setlist[currentIndex];
+                currentTitle.textContent = current.title;
+                currentArtist.textContent = current.artist;
+                
+                // Update next songs
+                updateNextSongs();
+                
+                // Update vote percentages
+                updateVoteResults();
+                
+                // Show different statuses
+                const statuses = ["🎸 Suonando Ora", "🎤 Cecco al Microfono", "🥁 Mauro Scatenato", "🎵 Giobi in Solo"];
+                songStatus.textContent = statuses[Math.floor(Math.random() * statuses.length)];
+            }
+            
+            function updateNextSongs() {
+                const nextSongs = [];
+                for (let i = 1; i <= 3; i++) {
+                    const nextIndex = (currentIndex + i) % setlist.length;
+                    nextSongs.push(setlist[nextIndex]);
+                }
+                
+                nextList.innerHTML = nextSongs.map(song => {
+                    if (song.status === 'vote') {
+                        return `
+                            <div class="next-item">
+                                <div class="next-item-title">🗳️ Voto Pubblico</div>
+                                <div class="next-item-artist">${song.title} vs Sweet Child</div>
+                            </div>
+                        `;
+                    } else {
+                        return `
+                            <div class="next-item">
+                                <div class="next-item-title">${song.title}</div>
+                                <div class="next-item-artist">${song.artist}</div>
+                            </div>
+                        `;
+                    }
+                }).join('');
+            }
+            
+            function updateVoteResults() {
+                // Simulate changing vote percentages
+                const songs = Object.keys(voteResults);
+                songs.forEach(song => {
+                    voteResults[song] += (Math.random() - 0.5) * 5;
+                    if (voteResults[song] < 0) voteResults[song] = 0;
+                    if (voteResults[song] > 60) voteResults[song] = 60;
+                });
+                
+                // Normalize to 100%
+                const total = Object.values(voteResults).reduce((a, b) => a + b, 0);
+                Object.keys(voteResults).forEach(song => {
+                    voteResults[song] = Math.round((voteResults[song] / total) * 100);
+                });
+                
+                // Update display
+                const voteOptions = votePanel.querySelectorAll('.vote-option');
+                voteOptions.forEach((option, index) => {
+                    const songName = Object.keys(voteResults)[index];
+                    if (songName) {
+                        const percentage = voteResults[songName];
+                        option.querySelector('.vote-percentage').textContent = percentage + '%';
+                    }
+                });
+            }
+            
+            // Simulate AI generation updates
+            function updateAIStatus() {
+                const aiMessages = [
+                    "Generando 'Ballata di Marco' per il compleanno...",
+                    "Analizzando personalità di Anna per canzone romantica...",
+                    "Creando 'Rock della Laurea' per Giulia...",
+                    "Componendo 'Blues dell'Ufficio' per i colleghi...",
+                    "Scrivendo 'Ska del Matrimonio' per i sposi..."
+                ];
+                
+                const randomMessage = aiMessages[Math.floor(Math.random() * aiMessages.length)];
+                aiStatus.querySelector('p').textContent = randomMessage;
+            }
+            
+            // Keyboard controls for demo
+            document.addEventListener('keydown', function(e) {
+                switch(e.key) {
+                    case 'ArrowRight':
+                    case ' ':
+                        advanceSong();
+                        break;
+                    case 'ArrowLeft':
+                        currentIndex = Math.max(0, currentIndex - 1);
+                        advanceSong();
+                        break;
+                    case 'v':
+                        votePanel.style.display = votePanel.style.display === 'none' ? 'block' : 'none';
+                        break;
+                    case 'a':
+                        aiStatus.style.display = aiStatus.style.display === 'none' ? 'block' : 'none';
+                        break;
+                    case 'f':
+                        document.documentElement.requestFullscreen();
+                        break;
+                    case 'Escape':
+                        document.exitFullscreen();
+                        break;
+                }
+            });
+            
+            // Auto-advance simulation (every 15 seconds for demo)
+            setInterval(advanceSong, 15000);
+            
+            // Update vote results every 5 seconds
+            setInterval(updateVoteResults, 5000);
+            
+            // Update AI status every 8 seconds
+            setInterval(updateAIStatus, 8000);
+            
+            // Initialize
+            updateNextSongs();
+            
+            console.log('🎸 TheCenti Display Mode');
+            console.log('Controls: → (next), ← (prev), V (toggle vote), A (toggle AI), F (fullscreen), ESC (exit)');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vota la Scaletta | TheCenti Live</title>
+    <meta name="description" content="Vota quale canzone vuoi sentire! Aiuta i TheCenti a scegliere la prossima canzone durante il live.">
+    
+    <link rel="icon" href="../assets/images/favicon.png" type="image/png">
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .voting-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--space-xxl) var(--space-md);
+        }
+        
+        .vote-options {
+            display: grid;
+            gap: var(--space-lg);
+            margin: var(--space-xl) 0;
+        }
+        
+        .vote-option {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 215, 0, 0.2);
+            border-radius: 20px;
+            padding: var(--space-xl);
+            transition: all var(--transition-smooth);
+            cursor: pointer;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .vote-option:hover {
+            border-color: var(--accent-gold);
+            background: rgba(255, 215, 0, 0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
+        }
+        
+        .vote-option.selected {
+            border-color: var(--accent-red);
+            background: rgba(255, 68, 68, 0.15);
+            box-shadow: 0 0 40px rgba(255, 68, 68, 0.3);
+        }
+        
+        .vote-option h3 {
+            color: var(--accent-gold);
+            font-size: 1.5rem;
+            margin-bottom: var(--space-sm);
+        }
+        
+        .vote-option .artist {
+            color: var(--text-gray);
+            font-style: italic;
+            margin-bottom: var(--space-md);
+        }
+        
+        .vote-option .description {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        .vote-percentage {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: var(--accent-purple);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-lg);
+            padding: var(--space-md);
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 50px;
+            color: var(--accent-red);
+            font-weight: 600;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .vote-button {
+            margin-top: var(--space-xl);
+            text-align: center;
+        }
+        
+        .vote-button .btn {
+            font-size: 1.2rem;
+            padding: var(--space-md) var(--space-xxl);
+            min-width: 200px;
+        }
+        
+        .vote-timer {
+            text-align: center;
+            margin-bottom: var(--space-lg);
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-sm);
+            color: var(--text-gray);
+            text-decoration: none;
+            margin-bottom: var(--space-lg);
+            transition: var(--transition-fast);
+        }
+        
+        .back-link:hover {
+            color: var(--accent-gold);
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="voting-container">
+            <a href="../index.html" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                Torna alla Home
+            </a>
+            
+            <div class="text-center mb-xl">
+                <h1>🗳️ Vota la Prossima Canzone</h1>
+                <p style="font-size: 1.1rem; color: var(--text-gray);">
+                    Aiutaci a scegliere cosa suonare! Il pubblico comanda (più o meno...)
+                </p>
+            </div>
+            
+            <div class="live-indicator">
+                <div style="width: 10px; height: 10px; background: var(--accent-red); border-radius: 50%; animation: pulse 1s infinite;"></div>
+                <span>LIVE ORA - Voto aperto!</span>
+            </div>
+            
+            <div class="vote-timer">
+                <i class="fas fa-clock"></i>
+                Tempo rimasto: <span id="timer">02:45</span>
+            </div>
+            
+            <div class="vote-options">
+                <div class="vote-option" data-song="battito-animale">
+                    <div class="vote-percentage">23%</div>
+                    <h3>Battito Animale</h3>
+                    <p class="artist">Raf</p>
+                    <p class="description">
+                        Il classico anni '80 che fa scatenare tutti! Perfetto per far ballare 
+                        anche i più timidi. Cecco ci mette sempre gli effetti vocali bizzarri.
+                    </p>
+                </div>
+                
+                <div class="vote-option" data-song="el-pube">
+                    <div class="vote-percentage">45%</div>
+                    <h3>El Pube</h3>
+                    <p class="artist">Manu Chao</p>
+                    <p class="description">
+                        Ritmo latino irresistibile che trasforma qualsiasi serata in festa! 
+                        Mauro si scatena con le percussioni e il pubblico canta a squarciagola.
+                    </p>
+                </div>
+                
+                <div class="vote-option" data-song="sweet-child">
+                    <div class="vote-percentage">32%</div>
+                    <h3>Sweet Child O' Mine</h3>
+                    <p class="artist">Guns N' Roses</p>
+                    <p class="description">
+                        Rock potente che sveglia i morti! Giobi si esibisce nel solo di chitarra 
+                        mentre gli altri due fanno cori epici. Momento clou garantito!
+                    </p>
+                </div>
+            </div>
+            
+            <div class="vote-button">
+                <button id="vote-btn" class="btn btn-primary" disabled>
+                    Seleziona una canzone per votare
+                </button>
+            </div>
+            
+            <div style="text-align: center; margin-top: var(--space-xl); color: var(--text-gray);">
+                <p>
+                    <i class="fas fa-users"></i>
+                    <strong id="total-votes">127</strong> persone hanno già votato
+                </p>
+                <p style="font-size: 0.9rem; margin-top: var(--space-sm);">
+                    Il voto si chiude automaticamente quando iniziamo a suonare!
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const voteOptions = document.querySelectorAll('.vote-option');
+            const voteBtn = document.getElementById('vote-btn');
+            const timerDisplay = document.getElementById('timer');
+            const totalVotesDisplay = document.getElementById('total-votes');
+            let selectedSong = null;
+            let timeLeft = 165; // 2:45 in seconds
+            let totalVotes = 127;
+            
+            // Vote option selection
+            voteOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remove previous selection
+                    voteOptions.forEach(opt => opt.classList.remove('selected'));
+                    
+                    // Add selection to clicked option
+                    this.classList.add('selected');
+                    selectedSong = this.dataset.song;
+                    
+                    // Enable vote button
+                    voteBtn.textContent = `Vota per "${this.querySelector('h3').textContent}"`;
+                    voteBtn.disabled = false;
+                    voteBtn.classList.remove('btn-primary');
+                    voteBtn.classList.add('btn-ai');
+                });
+            });
+            
+            // Vote button click
+            voteBtn.addEventListener('click', function() {
+                if (selectedSong) {
+                    // Simulate vote
+                    this.textContent = '✅ Voto registrato!';
+                    this.disabled = true;
+                    this.style.background = '#4ade80';
+                    
+                    // Update total votes
+                    totalVotes++;
+                    totalVotesDisplay.textContent = totalVotes;
+                    
+                    // Show success message
+                    setTimeout(() => {
+                        alert('🎉 Grazie per il tuo voto! Speriamo di suonare la tua scelta!');
+                    }, 500);
+                    
+                    // Update percentages (simulate)
+                    updatePercentages();
+                }
+            });
+            
+            // Timer countdown
+            function updateTimer() {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeLeft > 0) {
+                    timeLeft--;
+                } else {
+                    // Timer ended
+                    timerDisplay.textContent = 'Voto chiuso!';
+                    voteBtn.textContent = 'Votazione terminata';
+                    voteBtn.disabled = true;
+                    voteOptions.forEach(opt => opt.style.pointerEvents = 'none');
+                }
+            }
+            
+            // Update percentages
+            function updatePercentages() {
+                const percentages = document.querySelectorAll('.vote-percentage');
+                // Simulate dynamic percentages
+                const newPercentages = [25, 47, 28];
+                percentages.forEach((perc, index) => {
+                    perc.textContent = newPercentages[index] + '%';
+                });
+            }
+            
+            // Start timer
+            setInterval(updateTimer, 1000);
+            
+            // Simulate live updates
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    totalVotes += Math.floor(Math.random() * 3) + 1;
+                    totalVotesDisplay.textContent = totalVotes;
+                    updatePercentages();
+                }
+            }, 8000);
+        });
+    </script>
+</body>
+</html>

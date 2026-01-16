@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Richiedi Canzone AI | TheCenti Live</title>
+    <meta name="description" content="Chiedi una canzone personalizzata! La nostra AI creerà un pezzo unico basato sulla tua storia.">
+    
+    <link rel="icon" href="../assets/images/favicon.png" type="image/png">
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .request-container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: var(--space-xxl) var(--space-md);
+        }
+        
+        .ai-form {
+            background: rgba(139, 92, 246, 0.1);
+            border: 2px solid var(--accent-purple);
+            border-radius: 25px;
+            padding: var(--space-xl);
+            margin: var(--space-xl) 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ai-form::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-purple), transparent);
+            animation: ai-scan 3s infinite;
+        }
+        
+        @keyframes ai-scan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .form-group {
+            margin-bottom: var(--space-lg);
+        }
+        
+        .form-label {
+            display: block;
+            font-family: var(--font-display);
+            font-weight: 600;
+            color: var(--accent-gold);
+            margin-bottom: var(--space-sm);
+            font-size: 1.1rem;
+        }
+        
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: var(--space-md);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            color: var(--text-light);
+            font-family: var(--font-body);
+            font-size: 1rem;
+            transition: var(--transition-smooth);
+        }
+        
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .form-input::placeholder, .form-textarea::placeholder {
+            color: var(--text-gray);
+        }
+        
+        .ai-suggestions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-sm);
+            margin-top: var(--space-md);
+        }
+        
+        .suggestion-chip {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid var(--accent-gold);
+            border-radius: 25px;
+            padding: var(--space-sm) var(--space-md);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            font-size: 0.9rem;
+            color: var(--accent-gold);
+        }
+        
+        .suggestion-chip:hover, .suggestion-chip.selected {
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            transform: scale(1.05);
+        }
+        
+        .ai-status {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid var(--accent-purple);
+            border-radius: 15px;
+            padding: var(--space-md);
+            margin: var(--space-lg) 0;
+            text-align: center;
+            display: none;
+        }
+        
+        .ai-status.active {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin: var(--space-md) 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, var(--accent-purple), var(--accent-red));
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .queue-position {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 50px;
+            padding: var(--space-sm) var(--space-md);
+            text-align: center;
+            color: var(--accent-red);
+            font-weight: 600;
+            margin: var(--space-lg) 0;
+        }
+        
+        .example-songs {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: var(--space-lg);
+            margin: var(--space-lg) 0;
+        }
+        
+        .example-songs h4 {
+            color: var(--accent-gold);
+            margin-bottom: var(--space-md);
+            font-size: 1.1rem;
+        }
+        
+        .example-item {
+            margin-bottom: var(--space-sm);
+            padding: var(--space-sm);
+            background: rgba(255, 215, 0, 0.05);
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .example-item strong {
+            color: var(--accent-gold);
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-sm);
+            color: var(--text-gray);
+            text-decoration: none;
+            margin-bottom: var(--space-lg);
+            transition: var(--transition-fast);
+        }
+        
+        .back-link:hover {
+            color: var(--accent-gold);
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="request-container">
+            <a href="../index.html" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                Torna alla Home
+            </a>
+            
+            <div class="text-center mb-xl">
+                <h1>🤖 Richiedi Canzone AI</h1>
+                <p style="font-size: 1.1rem; color: var(--text-gray);">
+                    Racconta la tua storia e noi creiamo una canzone unica per te!
+                </p>
+            </div>
+            
+            <div class="queue-position" id="queueStatus" style="display: none;">
+                <i class="fas fa-clock"></i>
+                Sei in coda: posizione <span id="queuePosition">3</span> • Tempo stimato: <span id="estimatedTime">8-12 min</span>
+            </div>
+            
+            <form class="ai-form" id="aiRequestForm">
+                <div class="form-group">
+                    <label class="form-label" for="dedicatedTo">
+                        <i class="fas fa-user"></i>
+                        Per chi è dedicata la canzone?
+                    </label>
+                    <input type="text" 
+                           id="dedicatedTo" 
+                           name="dedicatedTo" 
+                           class="form-input" 
+                           placeholder="Es: Marco, mia moglie Anna, i colleghi di lavoro..."
+                           required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="occasion">
+                        <i class="fas fa-calendar-star"></i>
+                        Qual è l'occasione?
+                    </label>
+                    <select id="occasion" name="occasion" class="form-select" required>
+                        <option value="">Seleziona l'occasione...</option>
+                        <option value="compleanno">🎂 Compleanno</option>
+                        <option value="anniversario">💕 Anniversario</option>
+                        <option value="laurea">🎓 Laurea</option>
+                        <option value="matrimonio">💒 Matrimonio</option>
+                        <option value="pensione">🎉 Pensionamento</option>
+                        <option value="addio-celibato">🍻 Addio al celibato/nubilato</option>
+                        <option value="promozione">📈 Promozione lavoro</option>
+                        <option value="festa-amici">🎊 Festa tra amici</option>
+                        <option value="altro">🎵 Altra occasione</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="personality">
+                        <i class="fas fa-heart"></i>
+                        Descrivici la personalità (max 3 caratteristiche)
+                    </label>
+                    <div class="ai-suggestions" id="personalityChips">
+                        <div class="suggestion-chip" data-value="divertente">😄 Divertente</div>
+                        <div class="suggestion-chip" data-value="romantico">💖 Romantico</div>
+                        <div class="suggestion-chip" data-value="ironico">😏 Ironico</div>
+                        <div class="suggestion-chip" data-value="energico">⚡ Energico</div>
+                        <div class="suggestion-chip" data-value="timido">😊 Timido</div>
+                        <div class="suggestion-chip" data-value="ribelle">🤘 Ribelle</div>
+                        <div class="suggestion-chip" data-value="saggio">🦉 Saggio</div>
+                        <div class="suggestion-chip" data-value="pazzo">🤪 Pazzo</div>
+                    </div>
+                    <input type="hidden" id="personality" name="personality">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="story">
+                        <i class="fas fa-book-open"></i>
+                        Racconta un aneddoto divertente o un ricordo speciale
+                    </label>
+                    <textarea id="story" 
+                              name="story" 
+                              class="form-textarea" 
+                              placeholder="Es: Una volta Marco ha cercato di cucinare una lasagna e ha bruciato anche l'acqua! Oppure: Anna ha sempre sognato di imparare a suonare il pianoforte ma finisce sempre per suonare 'Mary had a little lamb'..."
+                              required></textarea>
+                    <div style="font-size: 0.9rem; color: var(--text-gray); margin-top: var(--space-sm);">
+                        💡 Più dettagli dai, più personale sarà la canzone!
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="email">
+                        <i class="fas fa-envelope"></i>
+                        Email (per inviarti il link della canzone)
+                    </label>
+                    <input type="email" 
+                           id="email" 
+                           name="email" 
+                           class="form-input" 
+                           placeholder="tuaemail@esempio.com">
+                    <div style="font-size: 0.9rem; color: var(--text-gray); margin-top: var(--space-sm);">
+                        📱 Oppure tagga <strong>@thecentiband</strong> su Instagram per ricevere il video!
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: var(--space-xl);">
+                    <button type="submit" class="btn btn-ai">
+                        <i class="fas fa-magic"></i>
+                        Genera la Mia Canzone AI
+                    </button>
+                </div>
+            </form>
+            
+            <div class="ai-status" id="aiStatus">
+                <h4>🎵 Generazione in corso...</h4>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p id="statusText">Analisi personalità e creazione melodia...</p>
+            </div>
+            
+            <div class="example-songs">
+                <h4>🎭 Esempi di canzoni generate</h4>
+                
+                <div class="example-item">
+                    <strong>Per Giulia (Compleanno):</strong> "Rock'n'Roll Birthday" - Una ballata rock sui suoi viaggi in moto e la passione per i gatti randagi
+                </div>
+                
+                <div class="example-item">
+                    <strong>Per i Colleghi (Pensione):</strong> "Bye Bye Ufficio Blues" - Reggae ironico sui caffè bruciati e le riunioni infinite
+                </div>
+                
+                <div class="example-item">
+                    <strong>Per Marco (Laurea):</strong> "Dottore per Caso" - Ska veloce sulla tesi scritta all'ultimo minuto con solo caffè e panico
+                </div>
+            </div>
+            
+            <div style="text-align: center; color: var(--text-gray); font-size: 0.9rem;">
+                <p>
+                    ⏱️ Tempo medio generazione: <strong>5-8 minuti</strong><br>
+                    🎤 La suoneremo durante il live se abbiamo tempo!<br>
+                    📹 Riceverai sempre il video della performance
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('aiRequestForm');
+            const personalityChips = document.getElementById('personalityChips');
+            const personalityInput = document.getElementById('personality');
+            const aiStatus = document.getElementById('aiStatus');
+            const queueStatus = document.getElementById('queueStatus');
+            const progressFill = document.getElementById('progressFill');
+            const statusText = document.getElementById('statusText');
+            
+            let selectedPersonalities = [];
+            
+            // Personality chips selection
+            personalityChips.addEventListener('click', function(e) {
+                if (e.target.classList.contains('suggestion-chip')) {
+                    const chip = e.target;
+                    const value = chip.dataset.value;
+                    
+                    if (chip.classList.contains('selected')) {
+                        // Deselect
+                        chip.classList.remove('selected');
+                        selectedPersonalities = selectedPersonalities.filter(p => p !== value);
+                    } else if (selectedPersonalities.length < 3) {
+                        // Select (max 3)
+                        chip.classList.add('selected');
+                        selectedPersonalities.push(value);
+                    }
+                    
+                    personalityInput.value = selectedPersonalities.join(', ');
+                    
+                    // Visual feedback for max selection
+                    if (selectedPersonalities.length >= 3) {
+                        document.querySelectorAll('.suggestion-chip:not(.selected)').forEach(chip => {
+                            chip.style.opacity = '0.5';
+                            chip.style.pointerEvents = 'none';
+                        });
+                    } else {
+                        document.querySelectorAll('.suggestion-chip').forEach(chip => {
+                            chip.style.opacity = '1';
+                            chip.style.pointerEvents = 'auto';
+                        });
+                    }
+                }
+            });
+            
+            // Form submission
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Validate required fields
+                const formData = new FormData(form);
+                const dedicatedTo = formData.get('dedicatedTo');
+                const occasion = formData.get('occasion');
+                const story = formData.get('story');
+                
+                if (!dedicatedTo || !occasion || !story || selectedPersonalities.length === 0) {
+                    alert('🚨 Compila tutti i campi obbligatori e seleziona almeno una caratteristica della personalità!');
+                    return;
+                }
+                
+                // Hide form and show AI status
+                form.style.display = 'none';
+                aiStatus.classList.add('active');
+                queueStatus.style.display = 'block';
+                
+                // Simulate AI generation process
+                simulateAIGeneration();
+            });
+            
+            function simulateAIGeneration() {
+                const steps = [
+                    { progress: 15, text: "🎭 Analisi personalità e contesto..." },
+                    { progress: 30, text: "🎵 Selezione genere musicale ottimale..." },
+                    { progress: 45, text: "✍️ Scrittura testo personalizzato..." },
+                    { progress: 65, text: "🎸 Composizione melodia e accordi..." },
+                    { progress: 80, text: "🎤 Preparazione arrangiamento band..." },
+                    { progress: 100, text: "✅ Canzone pronta! Aggiungiamo alla scaletta..." }
+                ];
+                
+                let currentStep = 0;
+                
+                const updateProgress = () => {
+                    if (currentStep < steps.length) {
+                        const step = steps[currentStep];
+                        progressFill.style.width = step.progress + '%';
+                        statusText.textContent = step.text;
+                        currentStep++;
+                        
+                        setTimeout(updateProgress, 2000 + Math.random() * 1000);
+                    } else {
+                        // Generation complete
+                        setTimeout(showSuccess, 1000);
+                    }
+                };
+                
+                updateProgress();
+            }
+            
+            function showSuccess() {
+                aiStatus.innerHTML = `
+                    <h4>🎉 Canzone generata con successo!</h4>
+                    <div style="background: rgba(255, 215, 0, 0.1); padding: var(--space-md); border-radius: 10px; margin: var(--space-md) 0;">
+                        <h5 style="color: var(--accent-gold); margin-bottom: var(--space-sm);">
+                            "${generateSongTitle()}"
+                        </h5>
+                        <p style="color: var(--text-gray); font-size: 0.95rem;">
+                            Genere: ${getRandomGenre()} • Difficoltà: ${Math.ceil(Math.random() * 10)}/10
+                        </p>
+                    </div>
+                    <p style="color: var(--text-light);">
+                        La tua canzone è stata aggiunta alla coda! La suoneremo durante il live.
+                    </p>
+                    <div style="margin-top: var(--space-lg);">
+                        <a href="../index.html" class="btn btn-primary">🏠 Torna alla Home</a>
+                    </div>
+                `;
+                
+                // Update queue position
+                document.getElementById('queuePosition').textContent = '1';
+                document.getElementById('estimatedTime').textContent = '2-5 min';
+            }
+            
+            function generateSongTitle() {
+                const formData = new FormData(form);
+                const name = formData.get('dedicatedTo').split(' ')[0];
+                const occasion = formData.get('occasion');
+                
+                const templates = [
+                    `Ballata di ${name}`,
+                    `${name} Rock'n'Roll`,
+                    `Il Blues di ${name}`,
+                    `${name} Party Anthem`,
+                    `La Marcia di ${name}`
+                ];
+                
+                return templates[Math.floor(Math.random() * templates.length)];
+            }
+            
+            function getRandomGenre() {
+                const genres = ['Rock', 'Pop Italiano', 'Reggae', 'Blues', 'Ska', 'Folk', 'Punk', 'Ballata'];
+                return genres[Math.floor(Math.random() * genres.length)];
+            }
+        });
+    </script>
+</body>
+</html>
