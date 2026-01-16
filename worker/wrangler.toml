@@ -1,0 +1,31 @@
+name = "thecenti-live-hub"
+main = "index.js"
+compatibility_date = "2024-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+# KV Namespace for state storage
+[[kv_namespaces]]
+binding = "LIVE_STATE"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+CORS_ORIGIN = "https://giobi.github.io"
+
+# Routes for custom domain (optional)
+# [[route]]
+# pattern = "api.thecenti.live/*"
+# zone_name = "thecenti.live"
+
+# Development configuration
+[env.development]
+name = "thecenti-live-hub-dev"
+[env.development.vars]
+ENVIRONMENT = "development"
+CORS_ORIGIN = "*"
+
+# Triggers (for cron jobs if needed)
+# [[triggers]]
+# cron = "0 2 * * *"  # Daily cleanup at 2 AM

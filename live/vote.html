@@ -207,93 +207,301 @@
     </main>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const voteOptions = document.querySelectorAll('.vote-option');
-            const voteBtn = document.getElementById('vote-btn');
-            const timerDisplay = document.getElementById('timer');
-            const totalVotesDisplay = document.getElementById('total-votes');
-            let selectedSong = null;
-            let timeLeft = 165; // 2:45 in seconds
-            let totalVotes = 127;
-            
-            // Vote option selection
-            voteOptions.forEach(option => {
-                option.addEventListener('click', function() {
-                    // Remove previous selection
-                    voteOptions.forEach(opt => opt.classList.remove('selected'));
-                    
-                    // Add selection to clicked option
-                    this.classList.add('selected');
-                    selectedSong = this.dataset.song;
-                    
-                    // Enable vote button
-                    voteBtn.textContent = `Vota per "${this.querySelector('h3').textContent}"`;
-                    voteBtn.disabled = false;
-                    voteBtn.classList.remove('btn-primary');
-                    voteBtn.classList.add('btn-ai');
-                });
-            });
-            
-            // Vote button click
-            voteBtn.addEventListener('click', function() {
-                if (selectedSong) {
-                    // Simulate vote
-                    this.textContent = '✅ Voto registrato!';
-                    this.disabled = true;
-                    this.style.background = '#4ade80';
-                    
-                    // Update total votes
-                    totalVotes++;
-                    totalVotesDisplay.textContent = totalVotes;
-                    
-                    // Show success message
-                    setTimeout(() => {
-                        alert('🎉 Grazie per il tuo voto! Speriamo di suonare la tua scelta!');
-                    }, 500);
-                    
-                    // Update percentages (simulate)
-                    updatePercentages();
-                }
-            });
-            
-            // Timer countdown
-            function updateTimer() {
-                const minutes = Math.floor(timeLeft / 60);
-                const seconds = timeLeft % 60;
-                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        class VotingPage {
+            constructor() {
+                this.API_BASE = 'https://thecenti-live-hub.your-username.workers.dev';
+                this.selectedSongIndex = null;
+                this.clientId = this.getOrCreateClientId();
+                this.pollInterval = null;
                 
-                if (timeLeft > 0) {
-                    timeLeft--;
-                } else {
-                    // Timer ended
-                    timerDisplay.textContent = 'Voto chiuso!';
-                    voteBtn.textContent = 'Votazione terminata';
-                    voteBtn.disabled = true;
-                    voteOptions.forEach(opt => opt.style.pointerEvents = 'none');
-                }
+                this.init();
             }
-            
-            // Update percentages
-            function updatePercentages() {
-                const percentages = document.querySelectorAll('.vote-percentage');
-                // Simulate dynamic percentages
-                const newPercentages = [25, 47, 28];
-                percentages.forEach((perc, index) => {
-                    perc.textContent = newPercentages[index] + '%';
+
+            async init() {
+                this.bindEvents();
+                await this.checkVotingStatus();
+                await this.loadVoteResults();
+                this.startPolling();
+            }
+
+            bindEvents() {
+                const voteOptions = document.querySelectorAll('.vote-option');
+                const voteBtn = document.getElementById('vote-btn');
+
+                voteOptions.forEach((option, index) => {
+                    option.addEventListener('click', () => {
+                        this.selectSong(index, option);
+                    });
+                });
+
+                voteBtn.addEventListener('click', () => {
+                    this.submitVote();
                 });
             }
-            
-            // Start timer
-            setInterval(updateTimer, 1000);
-            
-            // Simulate live updates
-            setInterval(() => {
-                if (Math.random() > 0.7) {
-                    totalVotes += Math.floor(Math.random() * 3) + 1;
-                    totalVotesDisplay.textContent = totalVotes;
-                    updatePercentages();
+
+            selectSong(songIndex, optionElement) {
+                // Remove previous selection
+                document.querySelectorAll('.vote-option').forEach(opt => 
+                    opt.classList.remove('selected'));
+                
+                // Add selection to clicked option
+                optionElement.classList.add('selected');
+                this.selectedSongIndex = songIndex;
+                
+                // Enable vote button
+                const songName = optionElement.querySelector('h3').textContent;
+                const voteBtn = document.getElementById('vote-btn');
+                voteBtn.textContent = `Vota per "${songName}"`;
+                voteBtn.disabled = false;
+                voteBtn.classList.remove('btn-primary');
+                voteBtn.classList.add('btn-ai');
+            }
+
+            async submitVote() {
+                if (this.selectedSongIndex === null) return;
+
+                const voteBtn = document.getElementById('vote-btn');
+                voteBtn.textContent = 'Invio voto...';
+                voteBtn.disabled = true;
+
+                try {
+                    const response = await fetch(`${this.API_BASE}/api/vote`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            action: 'vote',
+                            songIndex: this.selectedSongIndex,
+                            clientId: this.clientId
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        // Success
+                        voteBtn.textContent = '✅ Voto registrato!';
+                        voteBtn.style.background = '#4ade80';
+                        
+                        // Update results
+                        this.updateVoteResults(result.results);
+                        
+                        // Show success message
+                        this.showNotification('🎉 Grazie per il tuo voto! Speriamo di suonare la tua scelta!', 'success');
+                        
+                        // Disable further voting
+                        document.querySelectorAll('.vote-option').forEach(opt => 
+                            opt.style.pointerEvents = 'none');
+                            
+                    } else if (response.status === 409) {
+                        // Already voted
+                        voteBtn.textContent = '✅ Hai già votato!';
+                        voteBtn.style.background = '#f59e0b';
+                        this.showNotification('Hai già espresso il tuo voto per questa sessione!', 'info');
+                        
+                    } else if (response.status === 403) {
+                        // Voting closed
+                        voteBtn.textContent = 'Votazione chiusa';
+                        this.showNotification('La votazione è chiusa!', 'warning');
+                        this.disableVoting();
+                        
+                    } else {
+                        throw new Error(result.error || 'Errore durante il voto');
+                    }
+
+                } catch (error) {
+                    console.error('Vote error:', error);
+                    voteBtn.textContent = 'Errore - Riprova';
+                    voteBtn.disabled = false;
+                    voteBtn.style.background = '#ef4444';
+                    this.showNotification('Errore di connessione. Riprova!', 'error');
                 }
-            }, 8000);
+            }
+
+            async checkVotingStatus() {
+                try {
+                    const response = await fetch(`${this.API_BASE}/api/state`);
+                    const state = await response.json();
+                    
+                    if (!state.voteOpen) {
+                        this.disableVoting();
+                        this.updateLiveIndicator(false);
+                    } else {
+                        this.updateLiveIndicator(true);
+                    }
+                    
+                } catch (error) {
+                    console.error('Status check error:', error);
+                    // Continue with fallback behavior
+                }
+            }
+
+            async loadVoteResults() {
+                try {
+                    const response = await fetch(`${this.API_BASE}/api/vote`);
+                    const voteData = await response.json();
+                    
+                    if (voteData.votes && voteData.songs) {
+                        const results = this.calculateResults(voteData);
+                        this.updateVoteResults(results);
+                    }
+                    
+                } catch (error) {
+                    console.error('Results load error:', error);
+                    // Continue with static data
+                }
+            }
+
+            calculateResults(voteData) {
+                const songCounts = {};
+                const songNames = voteData.songs;
+
+                // Initialize counts
+                songNames.forEach((song, index) => {
+                    songCounts[index] = 0;
+                });
+
+                // Count votes
+                Object.values(voteData.votes).forEach(vote => {
+                    if (songCounts.hasOwnProperty(vote.songIndex)) {
+                        songCounts[vote.songIndex]++;
+                    }
+                });
+
+                // Calculate percentages
+                const results = songNames.map((name, index) => {
+                    const votes = songCounts[index] || 0;
+                    const percentage = voteData.totalVotes > 0 ? 
+                        Math.round((votes / voteData.totalVotes) * 100) : 0;
+                    
+                    return {
+                        name: name,
+                        votes: votes,
+                        percentage: percentage
+                    };
+                });
+
+                return {
+                    results: results,
+                    totalVotes: voteData.totalVotes,
+                    lastUpdate: Date.now()
+                };
+            }
+
+            updateVoteResults(resultsData) {
+                const percentageElements = document.querySelectorAll('.vote-percentage');
+                const totalVotesElement = document.getElementById('total-votes');
+
+                if (resultsData.results) {
+                    resultsData.results.forEach((result, index) => {
+                        if (percentageElements[index]) {
+                            percentageElements[index].textContent = `${result.percentage}%`;
+                        }
+                    });
+                }
+
+                if (totalVotesElement && resultsData.totalVotes !== undefined) {
+                    totalVotesElement.textContent = resultsData.totalVotes;
+                }
+            }
+
+            updateLiveIndicator(isLive) {
+                const liveIndicator = document.querySelector('.live-indicator span');
+                const timerElement = document.querySelector('.vote-timer');
+                
+                if (isLive) {
+                    liveIndicator.textContent = 'LIVE ORA - Voto aperto!';
+                    timerElement.style.display = 'block';
+                } else {
+                    liveIndicator.textContent = 'Votazione chiusa';
+                    timerElement.style.display = 'none';
+                }
+            }
+
+            disableVoting() {
+                document.querySelectorAll('.vote-option').forEach(opt => {
+                    opt.style.pointerEvents = 'none';
+                    opt.style.opacity = '0.6';
+                });
+                
+                const voteBtn = document.getElementById('vote-btn');
+                voteBtn.textContent = 'Votazione chiusa';
+                voteBtn.disabled = true;
+            }
+
+            startPolling() {
+                // Poll for updates every 5 seconds
+                this.pollInterval = setInterval(() => {
+                    this.loadVoteResults();
+                    this.checkVotingStatus();
+                }, 5000);
+            }
+
+            getOrCreateClientId() {
+                let clientId = localStorage.getItem('thecenti_client_id');
+                if (!clientId) {
+                    clientId = 'client_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+                    localStorage.setItem('thecenti_client_id', clientId);
+                }
+                return clientId;
+            }
+
+            showNotification(message, type = 'info') {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.className = `notification notification-${type}`;
+                notification.textContent = message;
+                
+                // Style the notification
+                Object.assign(notification.style, {
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    padding: '1rem 2rem',
+                    backgroundColor: this.getNotificationColor(type),
+                    color: 'white',
+                    borderRadius: '10px',
+                    fontWeight: 'bold',
+                    zIndex: '9999',
+                    maxWidth: '400px',
+                    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
+                    transform: 'translateX(100%)',
+                    transition: 'transform 0.3s ease'
+                });
+                
+                document.body.appendChild(notification);
+                
+                // Animate in
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(0)';
+                }, 100);
+                
+                // Auto remove
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 4000);
+            }
+
+            getNotificationColor(type) {
+                const colors = {
+                    success: '#4CAF50',
+                    error: '#f44336',
+                    warning: '#ff9800',
+                    info: '#2196F3'
+                };
+                return colors[type] || colors.info;
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new VotingPage();
         });
     </script>
 </body>

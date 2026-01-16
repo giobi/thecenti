@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TheCenti - Dashboard Band</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/dashboard.css">
+    <link rel="icon" href="../assets/img/favicon.ico" type="image/x-icon">
+</head>
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <div class="container">
+            <h1>🎸 TheCenti - Control Room</h1>
+            <div class="status-indicator" id="connectionStatus">
+                <span class="status-dot offline"></span>
+                <span class="status-text">Disconnesso</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-main">
+        <div class="container">
+            <!-- Vote Control Section -->
+            <section class="control-section">
+                <div class="section-header">
+                    <h2>🗳️ Controllo Voti</h2>
+                    <div class="section-status" id="voteStatus">
+                        <span class="status-badge closed">CHIUSO</span>
+                    </div>
+                </div>
+                
+                <div class="control-panel">
+                    <div class="big-toggle-group">
+                        <button class="big-toggle-btn" id="toggleVote" data-action="start">
+                            <span class="btn-icon">▶️</span>
+                            <span class="btn-text">APRI VOTI</span>
+                        </button>
+                    </div>
+                    
+                    <div class="control-grid">
+                        <div class="control-card">
+                            <h3>Timer Votazione</h3>
+                            <div class="timer-controls">
+                                <select id="voteTimer" class="timer-select">
+                                    <option value="30">30 secondi</option>
+                                    <option value="60" selected>1 minuto</option>
+                                    <option value="120">2 minuti</option>
+                                    <option value="180">3 minuti</option>
+                                </select>
+                                <button class="timer-btn" id="startTimer">Start Timer</button>
+                            </div>
+                            <div class="timer-display" id="timerDisplay">--:--</div>
+                        </div>
+                        
+                        <div class="control-card">
+                            <h3>Risultati Live</h3>
+                            <div class="vote-results" id="liveResults">
+                                <div class="result-item">
+                                    <span class="song-name">Canzone 1</span>
+                                    <span class="vote-percent">0%</span>
+                                </div>
+                                <div class="result-item">
+                                    <span class="song-name">Canzone 2</span>
+                                    <span class="vote-percent">0%</span>
+                                </div>
+                                <div class="result-item">
+                                    <span class="song-name">Canzone 3</span>
+                                    <span class="vote-percent">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AI Request Control Section -->
+            <section class="control-section">
+                <div class="section-header">
+                    <h2>🤖 Controllo AI Richieste</h2>
+                    <div class="section-status" id="aiStatus">
+                        <span class="status-badge closed">DISABILITATO</span>
+                    </div>
+                </div>
+                
+                <div class="control-panel">
+                    <div class="big-toggle-group">
+                        <button class="big-toggle-btn" id="toggleAI" data-action="start">
+                            <span class="btn-icon">🤖</span>
+                            <span class="btn-text">ABILITA AI</span>
+                        </button>
+                    </div>
+                    
+                    <div class="control-grid">
+                        <div class="control-card full-width">
+                            <h3>Coda Richieste AI</h3>
+                            <div class="ai-queue" id="aiQueue">
+                                <div class="queue-item">
+                                    <div class="request-info">
+                                        <div class="request-text">"Suonate qualcosa di energico per far ballare tutti!"</div>
+                                        <div class="request-meta">Da: Marco • 2 min fa • Mood: Energia</div>
+                                    </div>
+                                    <div class="request-actions">
+                                        <button class="btn-approve">✅</button>
+                                        <button class="btn-reject">❌</button>
+                                    </div>
+                                </div>
+                                <div class="queue-item">
+                                    <div class="request-info">
+                                        <div class="request-text">"Potreste fare una cover di Vasco?"</div>
+                                        <div class="request-meta">Da: Sara • 5 min fa • Mood: Rock</div>
+                                    </div>
+                                    <div class="request-actions">
+                                        <button class="btn-approve">✅</button>
+                                        <button class="btn-reject">❌</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="control-section">
+                <div class="section-header">
+                    <h2>⚡ Azioni Rapide</h2>
+                </div>
+                
+                <div class="quick-actions">
+                    <button class="quick-btn" id="resetAll">
+                        🔄 Reset Tutto
+                    </button>
+                    <button class="quick-btn" id="showQR">
+                        📱 Mostra QR
+                    </button>
+                    <button class="quick-btn" id="emergencyStop">
+                        🚨 Stop Emergenza
+                    </button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- QR Modal -->
+    <div class="modal" id="qrModal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Codici QR per il Pubblico</h2>
+            <div class="qr-grid">
+                <div class="qr-item">
+                    <h3>Vota la Prossima Canzone</h3>
+                    <div class="qr-code" id="voteQR">
+                        <!-- QR code will be generated here -->
+                        <div class="qr-placeholder">QR Code Voti</div>
+                    </div>
+                    <p>thecenti.live/vote</p>
+                </div>
+                <div class="qr-item">
+                    <h3>Richiedi Canzone all'AI</h3>
+                    <div class="qr-code" id="aiQR">
+                        <!-- QR code will be generated here -->
+                        <div class="qr-placeholder">QR Code AI</div>
+                    </div>
+                    <p>thecenti.live/request</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/js/dashboard.js"></script>
+</body>
+</html>
