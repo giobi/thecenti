@@ -132,12 +132,21 @@ class TheCentiDashboard {
     // Vote Control Methods
     async toggleVote() {
         const newState = !this.state.voteOpen;
-        
+
+        // Check if songs have been generated
+        if (newState && (!this.state.currentOptions || this.state.currentOptions.length === 0)) {
+            this.showNotification('⚠️ Prima devi generare 3 canzoni con "Genera 3 Canzoni"!', 'error');
+            return;
+        }
+
         let result;
         if (newState) {
-            // Opening vote - send default songs
+            // Opening vote - send CURRENT generated songs, not hardcoded!
+            const songTitles = this.state.currentOptions.map(song => song.name);
+            console.log('[DEBUG] Opening vote with songs:', songTitles);
+
             result = await this.sendVoteAction('start_vote', {
-                songs: ['Albachiara', 'Vita Spericolata', 'Sally']
+                songs: songTitles
             });
         } else {
             // Closing vote

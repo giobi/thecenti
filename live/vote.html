@@ -201,38 +201,51 @@
             }
 
             async loadVoteOptions() {
+                console.log('[DEBUG] loadVoteOptions: START');
+
                 try {
+                    console.log('[DEBUG] Fetching from API:', this.API_BASE);
                     const response = await fetch(`${this.API_BASE}/api/vote`);
                     const voteData = await response.json();
 
+                    console.log('[DEBUG] API response:', voteData);
+
                     if (voteData.songs && voteData.songs.length > 0) {
+                        console.log('[DEBUG] Using API songs:', voteData.songs);
                         this.renderVoteOptions(voteData.songs);
                         this.updateVoteResults(this.calculateResults(voteData));
                         return;
                     }
 
                 } catch (error) {
-                    console.log('Backend non disponibile, provo localStorage...', error);
+                    console.log('[DEBUG] API failed, trying localStorage...', error.message);
                 }
 
                 // Fallback: leggi da localStorage (salvato dall'admin)
+                console.log('[DEBUG] Checking localStorage...');
                 const savedSongs = localStorage.getItem('thecenti_current_songs');
+                console.log('[DEBUG] localStorage raw:', savedSongs);
+
                 if (savedSongs) {
                     try {
                         const songs = JSON.parse(savedSongs);
+                        console.log('[DEBUG] localStorage parsed:', songs);
+
                         if (songs && songs.length > 0) {
                             // Estrai solo i titoli per renderVoteOptions
                             const songTitles = songs.map(s => s.title || s);
+                            console.log('[DEBUG] Rendering localStorage songs:', songTitles);
                             this.renderVoteOptions(songTitles);
                             console.log('✅ Canzoni caricate da localStorage:', songTitles);
                             return;
                         }
                     } catch (e) {
-                        console.error('Errore parsing localStorage:', e);
+                        console.error('[DEBUG] Errore parsing localStorage:', e);
                     }
                 }
 
                 // Nessun dato disponibile
+                console.log('[DEBUG] No data available, showing no voting message');
                 this.renderNoVotingMessage();
             }
 
