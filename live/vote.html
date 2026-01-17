@@ -204,19 +204,36 @@
                 try {
                     const response = await fetch(`${this.API_BASE}/api/vote`);
                     const voteData = await response.json();
-                    
+
                     if (voteData.songs && voteData.songs.length > 0) {
                         this.renderVoteOptions(voteData.songs);
                         this.updateVoteResults(this.calculateResults(voteData));
-                    } else {
-                        // Fallback se non ci sono dati
-                        this.renderNoVotingMessage();
+                        return;
                     }
-                    
+
                 } catch (error) {
-                    console.error('Failed to load vote options:', error);
-                    this.renderErrorMessage();
+                    console.log('Backend non disponibile, provo localStorage...', error);
                 }
+
+                // Fallback: leggi da localStorage (salvato dall'admin)
+                const savedSongs = localStorage.getItem('thecenti_current_songs');
+                if (savedSongs) {
+                    try {
+                        const songs = JSON.parse(savedSongs);
+                        if (songs && songs.length > 0) {
+                            // Estrai solo i titoli per renderVoteOptions
+                            const songTitles = songs.map(s => s.title || s);
+                            this.renderVoteOptions(songTitles);
+                            console.log('✅ Canzoni caricate da localStorage:', songTitles);
+                            return;
+                        }
+                    } catch (e) {
+                        console.error('Errore parsing localStorage:', e);
+                    }
+                }
+
+                // Nessun dato disponibile
+                this.renderNoVotingMessage();
             }
 
             renderVoteOptions(songs) {
