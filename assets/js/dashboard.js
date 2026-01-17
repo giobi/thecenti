@@ -376,16 +376,18 @@ class TheCentiDashboard {
         document.getElementById('timerDisplay').textContent = timeText;
     }
 
-    updateVoteResults(results) {
+    updateVoteResults(resultsData) {
         const resultsContainer = document.getElementById('liveResults');
-        
+
+        // Handle both array (legacy) and object with results property
+        const results = Array.isArray(resultsData) ? resultsData : (resultsData.results || []);
+        const totalVotes = resultsData.totalVotes || results.reduce((sum, result) => sum + result.votes, 0);
+
         if (results.length === 0) {
             resultsContainer.innerHTML = '<div class="no-votes">Nessun voto ancora</div>';
             return;
         }
-        
-        const totalVotes = results.reduce((sum, result) => sum + result.votes, 0);
-        
+
         resultsContainer.innerHTML = results.map(result => {
             const percentage = totalVotes > 0 ? Math.round((result.votes / totalVotes) * 100) : 0;
             return `
