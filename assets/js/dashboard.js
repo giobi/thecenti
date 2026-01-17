@@ -690,13 +690,18 @@ class TheCentiDashboard {
         // Generate 3 random songs
         const randomSongs = this.getRandomSongs(clusterSongs, 3);
         this.state.currentOptions = randomSongs;
-        
+
+        // Save to localStorage for vote page synchronization
+        localStorage.setItem('thecenti_current_songs', JSON.stringify(
+            randomSongs.map(song => ({ title: song.name, author: song.author }))
+        ));
+
         // Display the options
         this.displayVoteOptions(randomSongs);
-        
+
         // Show the vote options section
         document.getElementById('voteOptions').style.display = 'block';
-        
+
         this.showNotification(`🎲 Generate 3 canzoni dal cluster ${this.state.currentCluster.toUpperCase()}`, 'success');
     }
 
