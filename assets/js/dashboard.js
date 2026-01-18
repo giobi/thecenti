@@ -100,6 +100,7 @@ class TheCentiDashboard {
                 // Load initial data
                 this.loadVoteResults();
                 this.loadAIQueue();
+                this.loadGeneratedSongs();
             } else {
                 throw new Error('API not responding');
             }
@@ -117,6 +118,7 @@ class TheCentiDashboard {
             if (this.state.connected) {
                 this.loadVoteResults();
                 this.loadAIQueue();
+                this.loadGeneratedSongs();
             }
         }, 3000);
     }
@@ -230,38 +232,204 @@ class TheCentiDashboard {
     async approveRequest(queueItem) {
         const requestId = queueItem.dataset.requestId;
         const requestText = queueItem.querySelector('.request-text').textContent;
-        
+
         const result = await this.sendAIAction('approve_request', { requestId });
-        
+
         if (result) {
             // Animate and remove from queue
             queueItem.style.transform = 'translateX(100%)';
             queueItem.style.opacity = '0';
-            
+
             setTimeout(() => {
                 queueItem.remove();
             }, 300);
-            
+
             this.showNotification(`✅ Richiesta approvata: "${requestText.substring(0, 30)}..."`, 'success');
+
+            // Auto-trigger song generation
+            this.showNotification('🎵 Avvio generazione canzone...', 'info');
+            await this.generateSong(requestId);
+        }
+    }
+
+    async generateSong(requestId) {
+        try {
+            this.showNotification('⏳ Generando canzone con Gemini AI... (può richiedere 10-30s)', 'info');
+
+            console.log('[DEBUG] Starting song generation for requestId:', requestId);
+
+            const result = await this.sendAIAction('generate_song', { requestId });
+
+            console.log('[DEBUG] Generation result:', result);
+
+            if (result && result.success) {
+                this.showNotification(`✅ Canzone generata: "${result.song.lyrics.title}"`, 'success');
+                console.log('[DEBUG] Generated song:', result.song);
+                // Reload generated songs list
+                this.loadGeneratedSongs();
+            } else {
+                const errorMsg = result?.error || 'Unknown error';
+                const errorDetail = result?.message || '';
+                throw new Error(`Generation failed: ${errorMsg} - ${errorDetail}`);
+            }
+        } catch (error) {
+            console.error('Song generation error:', error);
+            this.showNotification(`❌ Errore generazione: ${error.message}`, 'error');
+
+            // Show detailed error in console for debugging
+            console.error('Full error details:', error);
         }
     }
 
     async rejectRequest(queueItem) {
         const requestId = queueItem.dataset.requestId;
         const requestText = queueItem.querySelector('.request-text').textContent;
-        
+
         const result = await this.sendAIAction('reject_request', { requestId });
-        
+
         if (result) {
             // Animate and remove from queue
             queueItem.style.transform = 'translateX(-100%)';
             queueItem.style.opacity = '0';
-            
+
             setTimeout(() => {
                 queueItem.remove();
             }, 300);
-            
+
             this.showNotification(`❌ Richiesta rifiutata`, 'info');
+        }
+    }
+
+    // Generated Songs Management
+    async loadGeneratedSongs() {
+        try {
+            const response = await this.sendAIAction('list_generated_songs', {});
+            if (response && response.success) {
+                const songs = response.songs.filter(s => s.status !== 'played');
+                this.renderGeneratedSongs(songs);
+            }
+        } catch (error) {
+            console.error('Failed to load generated songs:', error);
+        }
+    }
+
+    renderGeneratedSongs(songs) {
+        const container = document.getElementById('generatedSongsContainer');
+        if (!container) {
+            console.warn('[WARN] generatedSongsContainer not found in DOM');
+            return;
+        }
+
+        if (!songs || songs.length === 0) {
+            container.innerHTML = '<div class="no-requests">Nessuna canzone generata</div>';
+            return;
+        }
+
+        console.log('[DEBUG] Rendering', songs.length, 'generated songs');
+
+        container.innerHTML = songs.map(song => `
+            <div class="generated-song-item" data-song-id="${song.id}" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 15px; margin-bottom: 1rem;">
+                <div class="song-info">
+                    <div class="song-title" style="font-size: 1.2rem; font-weight: 700; color: var(--accent-gold);">${song.lyrics.title}</div>
+                    <div class="song-meta" style="font-size: 0.9rem; color: var(--text-gray); margin-top: 0.5rem;">
+                        Per: ${song.dedicatedTo} • ${song.occasion} • ${song.genre || 'rock'}
+                    </div>
+                    <div class="song-status-badge ${song.status}" style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 15px; font-size: 0.8rem; font-weight: 600; margin-top: 0.5rem; ${song.status === 'active' ? 'background: #ff4444; color: white;' : 'background: #8b5cf6; color: white;'}">${song.status === 'active' ? '🎸 IN LIVE' : '📝 Pronta'}</div>
+                </div>
+                <div class="song-actions" style="display: flex; gap: 0.5rem;">
+                    <button class="btn-preview" onclick="dashboard.previewSong('${song.id}')" style="padding: 0.5rem 1rem; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; background: #8b5cf6; color: white;">👁️ Preview</button>
+                    ${song.status !== 'active' ? `<button class="btn-set-current" onclick="dashboard.setCurrentSong('${song.id}')" style="padding: 0.5rem 1rem; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; background: #ffd700; color: #1a1a2e;">▶️ Set Current</button>` : ''}
+                    <button class="btn-mark-played" onclick="dashboard.markPlayed('${song.id}')" style="padding: 0.5rem 1rem; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; background: #ff4444; color: white;">✅ Played</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async setCurrentSong(songId) {
+        try {
+            const result = await this.sendAIAction('set_current_song', { songId });
+
+            if (result && result.success) {
+                this.showNotification(`🎸 "${result.currentSong.title}" è ora in live!`, 'success');
+                this.loadGeneratedSongs();
+            }
+        } catch (error) {
+            console.error('Failed to set current song:', error);
+            this.showNotification('❌ Errore impostazione canzone corrente', 'error');
+        }
+    }
+
+    async markPlayed(songId) {
+        if (!confirm('Sei sicuro di voler archiviare questa canzone?')) {
+            return;
+        }
+
+        try {
+            const result = await this.sendAIAction('mark_played', { songId });
+
+            if (result && result.success) {
+                this.showNotification('✅ Canzone archiviata!', 'success');
+                this.loadGeneratedSongs();
+            }
+        } catch (error) {
+            console.error('Failed to mark played:', error);
+            this.showNotification('❌ Errore archiviazione', 'error');
+        }
+    }
+
+    async previewSong(songId) {
+        try {
+            const response = await this.sendAIAction('list_generated_songs', {});
+            if (!response || !response.success) return;
+
+            const song = response.songs.find(s => s.id === songId);
+            if (!song) return;
+
+            // Show modal with lyrics
+            const modal = document.getElementById('qrModal');
+            const modalContent = modal.querySelector('.modal-content');
+
+            modalContent.innerHTML = `
+                <span class="close" onclick="dashboard.closeModal()">&times;</span>
+                <h2 style="color: var(--accent-gold); margin-bottom: var(--space-lg);">
+                    ${song.lyrics.title}
+                </h2>
+                <p style="color: var(--text-gray); margin-bottom: var(--space-xl);">
+                    Per: <strong>${song.dedicatedTo}</strong> • ${song.occasion}
+                </p>
+
+                <div class="lyrics-preview" style="max-height: 60vh; overflow-y: auto; text-align: left;">
+                    <div style="margin-bottom: var(--space-lg);">
+                        <h3 style="color: var(--accent-purple);">Strofa 1</h3>
+                        ${song.lyrics.verse1.map(line => `<p>${line}</p>`).join('')}
+                    </div>
+
+                    <div style="margin-bottom: var(--space-lg);">
+                        <h3 style="color: var(--accent-gold);">Ritornello</h3>
+                        ${song.lyrics.chorus.map(line => `<p>${line}</p>`).join('')}
+                    </div>
+
+                    <div style="margin-bottom: var(--space-lg);">
+                        <h3 style="color: var(--accent-purple);">Strofa 2</h3>
+                        ${song.lyrics.verse2.map(line => `<p>${line}</p>`).join('')}
+                    </div>
+
+                    <div style="margin-bottom: var(--space-lg);">
+                        <h3 style="color: var(--accent-red);">Bridge</h3>
+                        ${song.lyrics.bridge.map(line => `<p>${line}</p>`).join('')}
+                    </div>
+
+                    <div>
+                        <h3 style="color: var(--accent-gold);">Ritornello Finale</h3>
+                        ${song.lyrics.finalChorus.map(line => `<p>${line}</p>`).join('')}
+                    </div>
+                </div>
+            `;
+
+            modal.style.display = 'block';
+
+        } catch (error) {
+            console.error('Preview error:', error);
         }
     }
 
@@ -620,7 +788,7 @@ class TheCentiDashboard {
 
     updateAIQueue(requests) {
         const queueContainer = document.getElementById('aiQueue');
-        
+
         if (!requests || requests.length === 0) {
             queueContainer.innerHTML = '<div class="no-requests">Nessuna richiesta in coda</div>';
             return;
@@ -629,8 +797,15 @@ class TheCentiDashboard {
         queueContainer.innerHTML = requests.map(request => `
             <div class="queue-item" data-request-id="${request.id}">
                 <div class="request-info">
-                    <div class="request-text">${request.text}</div>
-                    <div class="request-meta">Da: ${request.userName} • ${this.formatTimeAgo(request.timestamp)} • Mood: ${request.mood}</div>
+                    <div class="request-text">
+                        <strong>Per: ${request.dedicatedTo || 'N/A'}</strong> • ${request.occasion || 'N/A'}
+                    </div>
+                    <div class="request-meta">
+                        Personalità: ${Array.isArray(request.personality) ? request.personality.join(', ') : request.personality || 'N/A'} • Da: ${request.userName} • ${this.formatTimeAgo(request.timestamp)}
+                    </div>
+                    <div class="request-story" style="font-size: 0.9rem; color: var(--text-gray); margin-top: var(--space-xs); max-height: 60px; overflow: hidden;">
+                        ${(request.story || '').substring(0, 100)}${(request.story || '').length > 100 ? '...' : ''}
+                    </div>
                 </div>
                 <div class="request-actions">
                     <button class="btn-approve">✅</button>

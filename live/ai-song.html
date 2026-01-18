@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Song Live | TheCenti</title>
+    <meta name="description" content="Guarda in diretta la canzone generata dall'AI per TheCenti band">
+
+    <link rel="icon" href="../assets/images/favicon.png" type="image/png">
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-stage) 100%);
+            min-height: 100vh;
+            padding: var(--space-lg);
+        }
+
+        .ai-song-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: var(--space-xl) var(--space-md);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: var(--space-xxl);
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 6vw, 4rem);
+            color: var(--accent-purple);
+            margin-bottom: var(--space-md);
+        }
+
+        .current-song-display {
+            background: rgba(139, 92, 246, 0.1);
+            border: 2px solid var(--accent-purple);
+            border-radius: 25px;
+            padding: var(--space-xxl);
+            margin-bottom: var(--space-xxl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .current-song-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+            animation: ai-scan 3s infinite;
+        }
+
+        @keyframes ai-scan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .song-dedication {
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            color: var(--accent-gold);
+            margin-bottom: var(--space-lg);
+            text-align: center;
+        }
+
+        .song-title {
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 800;
+            color: var(--accent-gold);
+            text-align: center;
+            margin-bottom: var(--space-xxl);
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+        }
+
+        .lyrics-section {
+            margin-bottom: var(--space-xxl);
+        }
+
+        .lyrics-section-title {
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .verse-title {
+            color: var(--accent-purple);
+        }
+
+        .chorus-title {
+            color: var(--accent-gold);
+        }
+
+        .bridge-title {
+            color: var(--accent-red);
+        }
+
+        .lyrics-line {
+            font-size: clamp(1rem, 2.5vw, 1.8rem);
+            line-height: 1.8;
+            margin-bottom: var(--space-sm);
+            color: var(--text-light);
+        }
+
+        .no-song-message {
+            text-align: center;
+            padding: var(--space-xxl);
+        }
+
+        .no-song-message h2 {
+            font-size: clamp(1.5rem, 4vw, 3rem);
+            color: var(--accent-purple);
+            margin-bottom: var(--space-lg);
+        }
+
+        .no-song-message p {
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            color: var(--text-gray);
+            margin-bottom: var(--space-xl);
+        }
+
+        .btn-request {
+            display: inline-block;
+            padding: var(--space-md) var(--space-xxl);
+            background: linear-gradient(45deg, var(--accent-purple), var(--accent-red));
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            transition: var(--transition-smooth);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-request:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(139, 92, 246, 0.5);
+        }
+
+        .live-badge {
+            display: inline-block;
+            background: var(--accent-red);
+            color: white;
+            padding: var(--space-sm) var(--space-lg);
+            border-radius: 25px;
+            font-weight: 700;
+            margin-bottom: var(--space-lg);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-sm);
+            color: var(--text-gray);
+            text-decoration: none;
+            margin-bottom: var(--space-lg);
+            transition: var(--transition-fast);
+        }
+
+        .back-link:hover {
+            color: var(--accent-gold);
+        }
+    </style>
+</head>
+<body>
+    <div class="ai-song-container">
+        <a href="../index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Torna alla Home
+        </a>
+
+        <div class="header">
+            <h1>🤖 AI Generated Song</h1>
+            <p style="font-size: 1.1rem; color: var(--text-gray);">
+                Canzone personalizzata generata dall'intelligenza artificiale
+            </p>
+        </div>
+
+        <!-- Current Song Display -->
+        <div id="currentSong" style="display: none;">
+            <div class="current-song-display">
+                <div class="live-badge">🔴 IN LIVE</div>
+
+                <div class="song-dedication" id="dedication">
+                    Dedicata a: <strong id="dedicatedTo"></strong>
+                </div>
+
+                <div class="song-title" id="songTitle"></div>
+
+                <div id="lyricsContainer">
+                    <!-- Lyrics will be dynamically rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- No Song Message -->
+        <div id="noSong" class="no-song-message">
+            <h2>🎸 Nessuna canzone AI in esecuzione</h2>
+            <p>
+                Al momento non ci sono canzoni generate dall'AI in live.<br>
+                Richiedi la tua canzone personalizzata!
+            </p>
+            <a href="request.html" class="btn-request">
+                <i class="fas fa-magic"></i>
+                Richiedi la Tua Canzone
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const API_BASE = 'https://thecenti-live-hub.giobi.workers.dev';
+
+            const currentSongEl = document.getElementById('currentSong');
+            const noSongEl = document.getElementById('noSong');
+            const songTitleEl = document.getElementById('songTitle');
+            const dedicatedToEl = document.getElementById('dedicatedTo');
+            const lyricsContainerEl = document.getElementById('lyricsContainer');
+
+            // Poll for current AI song
+            async function pollCurrentSong() {
+                try {
+                    const response = await fetch(`${API_BASE}/api/ai/current`);
+                    if (response.ok) {
+                        const data = await response.json();
+
+                        if (data.currentSong) {
+                            showSong(data.currentSong);
+                        } else {
+                            showNoSong();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                    showNoSong();
+                }
+            }
+
+            function showSong(song) {
+                currentSongEl.style.display = 'block';
+                noSongEl.style.display = 'none';
+
+                songTitleEl.textContent = song.title;
+                dedicatedToEl.textContent = song.dedicatedTo;
+
+                renderLyrics(song.lyrics);
+            }
+
+            function showNoSong() {
+                currentSongEl.style.display = 'none';
+                noSongEl.style.display = 'block';
+            }
+
+            function renderLyrics(lyrics) {
+                const sections = [
+                    { title: 'Strofa 1', lines: lyrics.verse1, colorClass: 'verse-title' },
+                    { title: 'Ritornello', lines: lyrics.chorus, colorClass: 'chorus-title' },
+                    { title: 'Strofa 2', lines: lyrics.verse2, colorClass: 'verse-title' },
+                    { title: 'Bridge', lines: lyrics.bridge, colorClass: 'bridge-title' },
+                    { title: 'Ritornello Finale', lines: lyrics.finalChorus, colorClass: 'chorus-title' }
+                ];
+
+                lyricsContainerEl.innerHTML = sections.map(section => `
+                    <div class="lyrics-section">
+                        <h3 class="lyrics-section-title ${section.colorClass}">
+                            ${section.title}
+                        </h3>
+                        ${section.lines.map(line => `
+                            <p class="lyrics-line">${line}</p>
+                        `).join('')}
+                    </div>
+                `).join('');
+            }
+
+            // Initial poll
+            pollCurrentSong();
+
+            // Poll every 5 seconds
+            setInterval(pollCurrentSong, 5000);
+
+            console.log('🎸 TheCenti AI Song Page - Polling every 5s');
+        });
+    </script>
+</body>
+</html>

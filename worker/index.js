@@ -25,6 +25,8 @@ export default {
         return handleVoteAPI(request, env, corsHeaders);
       } else if (url.pathname === '/api/ai') {
         return handleAIAPI(request, env, corsHeaders);
+      } else if (url.pathname === '/api/ai/current') {
+        return handleAICurrentAPI(request, env, corsHeaders);
       } else if (url.pathname === '/ws') {
         return handleWebSocket(request, env);
       }
@@ -234,11 +236,13 @@ async function handleAIAPI(request, env, corsHeaders) {
     
     if (body.action === 'submit_request') {
       // Submit new AI request
+      console.log('[DEBUG] Received submit_request:', body);
+
       const currentState = await env.LIVE_STATE.get('current', 'json') || {};
-      
+
       if (!currentState.aiEnabled) {
-        return new Response(JSON.stringify({ 
-          error: 'AI requests are disabled' 
+        return new Response(JSON.stringify({
+          error: 'AI requests are disabled'
         }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -253,12 +257,17 @@ async function handleAIAPI(request, env, corsHeaders) {
 
       const newRequest = {
         id: crypto.randomUUID(),
-        text: body.text,
-        mood: body.mood || 'general',
+        dedicatedTo: body.dedicatedTo || 'N/A',
+        occasion: body.occasion || 'N/A',
+        personality: Array.isArray(body.personality) ? body.personality : (body.personality ? body.personality.split(',').map(p => p.trim()) : []),
+        story: body.story || '',
+        email: body.email || '',
         userName: body.userName || 'Anonimo',
         timestamp: Date.now(),
         status: 'pending'
       };
+
+      console.log('[DEBUG] Created new request:', newRequest);
 
       queueData.requests.push(newRequest);
       await env.LIVE_STATE.put('ai_queue', JSON.stringify(queueData));
@@ -308,18 +317,185 @@ async function handleAIAPI(request, env, corsHeaders) {
       await env.LIVE_STATE.put('ai_queue', JSON.stringify(queueData));
       await broadcastAIUpdate(env, queueData);
 
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         success: true,
         request: request
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    if (body.action === 'generate_song') {
+      // Generate song using Gemini API
+      const requestId = body.requestId;
+      console.log('[DEBUG] Generate song request for:', requestId);
+
+      const queueData = await env.LIVE_STATE.get('ai_queue', 'json') || {
+        requests: [],
+        approved: [],
+        rejected: []
+      };
+
+      console.log('[DEBUG] Queue data:', {
+        approved: queueData.approved.length,
+        requests: queueData.requests.length
+      });
+
+      // Find request in approved list
+      const approvedRequest = queueData.approved.find(r => r.id === requestId);
+      if (!approvedRequest) {
+        console.error('[ERROR] Request not found in approved list. RequestId:', requestId);
+        return new Response(JSON.stringify({
+          error: 'Request not found in approved list',
+          requestId: requestId,
+          approvedCount: queueData.approved.length
+        }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      console.log('[DEBUG] Found approved request:', {
+        id: approvedRequest.id,
+        dedicatedTo: approvedRequest.dedicatedTo,
+        occasion: approvedRequest.occasion
+      });
+
+      try {
+        // Call Gemini API to generate song
+        console.log('[DEBUG] Calling Gemini API...');
+        const generatedSong = await callGeminiAPI(approvedRequest, env);
+        console.log('[DEBUG] Gemini returned:', generatedSong);
+
+        // Save to generated songs KV
+        const songsData = await env.LIVE_STATE.get('ai_generated_songs', 'json') || { songs: [] };
+
+        const newSong = {
+          id: crypto.randomUUID(),
+          requestId: requestId,
+          generatedAt: Date.now(),
+          status: 'generated',
+          dedicatedTo: approvedRequest.dedicatedTo,
+          occasion: approvedRequest.occasion,
+          ...generatedSong
+        };
+
+        songsData.songs.push(newSong);
+        await env.LIVE_STATE.put('ai_generated_songs', JSON.stringify(songsData));
+
+        console.log('[DEBUG] Song saved. Total songs:', songsData.songs.length);
+
+        return new Response(JSON.stringify({
+          success: true,
+          song: newSong
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+
+      } catch (error) {
+        console.error('[ERROR] Song generation failed:', error);
+        return new Response(JSON.stringify({
+          error: 'Song generation failed',
+          message: error.message,
+          stack: error.stack
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    if (body.action === 'set_current_song') {
+      // Set a generated song as current
+      const songId = body.songId;
+      const songsData = await env.LIVE_STATE.get('ai_generated_songs', 'json') || { songs: [] };
+
+      const song = songsData.songs.find(s => s.id === songId);
+      if (!song) {
+        return new Response(JSON.stringify({
+          error: 'Song not found'
+        }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Update song status
+      song.status = 'active';
+      await env.LIVE_STATE.put('ai_generated_songs', JSON.stringify(songsData));
+
+      // Update current state
+      const currentState = await env.LIVE_STATE.get('current', 'json') || {};
+      currentState.currentAISong = {
+        id: song.id,
+        title: song.lyrics.title,
+        dedicatedTo: song.dedicatedTo,
+        lyrics: song.lyrics
+      };
+      await env.LIVE_STATE.put('current', JSON.stringify(currentState));
+
+      await broadcastStateUpdate(env, currentState);
+
+      return new Response(JSON.stringify({
+        success: true,
+        currentSong: currentState.currentAISong
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (body.action === 'mark_played') {
+      // Mark song as played
+      const songId = body.songId;
+      const songsData = await env.LIVE_STATE.get('ai_generated_songs', 'json') || { songs: [] };
+
+      const song = songsData.songs.find(s => s.id === songId);
+      if (!song) {
+        return new Response(JSON.stringify({
+          error: 'Song not found'
+        }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Update song status
+      song.status = 'played';
+      song.playedAt = Date.now();
+      await env.LIVE_STATE.put('ai_generated_songs', JSON.stringify(songsData));
+
+      // Clear current AI song from state
+      const currentState = await env.LIVE_STATE.get('current', 'json') || {};
+      if (currentState.currentAISong && currentState.currentAISong.id === songId) {
+        currentState.currentAISong = null;
+        await env.LIVE_STATE.put('current', JSON.stringify(currentState));
+        await broadcastStateUpdate(env, currentState);
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        song: song
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (body.action === 'list_generated_songs') {
+      // List all generated songs
+      const songsData = await env.LIVE_STATE.get('ai_generated_songs', 'json') || { songs: [] };
+
+      return new Response(JSON.stringify({
+        success: true,
+        songs: songsData.songs
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
   }
 
-  return new Response('Method not allowed', { 
-    status: 405, 
-    headers: corsHeaders 
+  return new Response('Method not allowed', {
+    status: 405,
+    headers: corsHeaders
   });
 }
 
@@ -410,5 +586,123 @@ async function broadcastAIUpdate(env, queueData) {
   console.log('Broadcasting AI update:', queueData);
 }
 
+// AI Current Song API - optimized for public page polling
+async function handleAICurrentAPI(request, env, corsHeaders) {
+  if (request.method !== 'GET') {
+    return new Response('Method not allowed', {
+      status: 405,
+      headers: corsHeaders
+    });
+  }
+
+  try {
+    const currentState = await env.LIVE_STATE.get('current', 'json') || {};
+    const currentSong = currentState.currentAISong || null;
+
+    return new Response(JSON.stringify({
+      currentSong: currentSong
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      error: 'Failed to fetch current song',
+      message: error.message
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// Gemini API call for song generation
+async function callGeminiAPI(request, env) {
+  const apiKey = env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY not configured');
+  }
+
+  // Build prompt
+  const systemPrompt = `Sei songwriter per TheCenti, cover band italiana rock/pop.
+Scrivi canzoni personalizzate in italiano basate sulle informazioni fornite.
+
+Struttura obbligatoria:
+- verse1 (strofa 1): 4 linee
+- chorus (ritornello): 4 linee
+- verse2 (strofa 2): 4 linee
+- bridge (ponte): 4 linee
+- finalChorus (ritornello finale): 4 linee
+
+Ogni linea MAX 60 caratteri per leggibilità live.
+Output SOLO JSON valido, nessun altro testo.
+
+Formato output:
+{
+  "lyrics": {
+    "title": "Titolo Canzone",
+    "verse1": ["linea1", "linea2", "linea3", "linea4"],
+    "chorus": ["linea1", "linea2", "linea3", "linea4"],
+    "verse2": ["linea1", "linea2", "linea3", "linea4"],
+    "bridge": ["linea1", "linea2", "linea3", "linea4"],
+    "finalChorus": ["linea1", "linea2", "linea3", "linea4"]
+  },
+  "genre": "rock-italiano",
+  "mood": "divertente"
+}`;
+
+  const userPrompt = `Crea canzone per:
+
+DEDICATA A: ${request.dedicatedTo}
+OCCASIONE: ${request.occasion}
+PERSONALITÀ: ${request.personality.join(', ')}
+STORIA/ANEDDOTO: ${request.story}
+
+Crea una canzone divertente, memorabile e personalizzata. Usa dettagli dalla storia per rendere il testo unico.`;
+
+  // Call Gemini API
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{
+          text: systemPrompt + '\n\n' + userPrompt
+        }]
+      }],
+      generationConfig: {
+        temperature: 1.0,
+        maxOutputTokens: 2048,
+        responseMimeType: 'application/json'
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+
+  // Extract generated content
+  if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+    throw new Error('Invalid Gemini API response structure');
+  }
+
+  const generatedText = data.candidates[0].content.parts[0].text;
+
+  // Parse JSON response
+  try {
+    const songData = JSON.parse(generatedText);
+    return songData;
+  } catch (parseError) {
+    throw new Error(`Failed to parse Gemini response as JSON: ${parseError.message}`);
+  }
+}
+
 // Export for testing
-export { calculateVoteResults, handleStateAPI, handleVoteAPI, handleAIAPI };
+export { calculateVoteResults, handleStateAPI, handleVoteAPI, handleAIAPI, handleAICurrentAPI, callGeminiAPI };

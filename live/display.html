@@ -324,7 +324,25 @@
             <div class="song-artist" id="currentArtist">The Knack</div>
             <div class="song-status" id="songStatus">🎸 Suonando Ora</div>
         </div>
-        
+
+        <!-- AI Generated Song Display -->
+        <div class="ai-song-section" id="aiSongSection" style="display: none;">
+            <div class="ai-song-header">
+                <h2 style="color: var(--accent-purple); font-size: clamp(1.5rem, 4vw, 3rem); margin-bottom: var(--space-md);">
+                    🤖 AI Generated Song
+                </h2>
+                <div style="font-size: clamp(1rem, 2.5vw, 2rem); color: var(--accent-gold); margin-bottom: var(--space-lg);">
+                    Dedicata a: <span id="aiDedicatedTo"></span>
+                </div>
+            </div>
+
+            <div class="ai-song-title" id="aiTitle" style="font-size: clamp(2.5rem, 6vw, 6rem); font-weight: 800; color: var(--accent-gold); margin-bottom: var(--space-xl);"></div>
+
+            <div class="ai-song-lyrics" id="aiLyrics" style="max-width: 900px; margin: 0 auto; text-align: left; font-size: clamp(1rem, 2.5vw, 2.5rem); line-height: 1.6;">
+                <!-- Lyrics will be rendered here -->
+            </div>
+        </div>
+
         <!-- Next songs -->
         <div class="next-songs">
             <h3>⏭️ Prossime Canzoni</h3>
@@ -356,12 +374,19 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const API_BASE = 'https://thecenti-live-hub.giobi.workers.dev';
+
             const currentTitle = document.getElementById('currentTitle');
             const currentArtist = document.getElementById('currentArtist');
             const songStatus = document.getElementById('songStatus');
             const nextList = document.getElementById('nextList');
             const votePanel = document.getElementById('votePanel');
             const aiStatus = document.getElementById('aiStatus');
+
+            const aiSongSection = document.getElementById('aiSongSection');
+            const aiTitle = document.getElementById('aiTitle');
+            const aiDedicatedTo = document.getElementById('aiDedicatedTo');
+            const aiLyrics = document.getElementById('aiLyrics');
             
             // Sample setlist data
             const setlist = [
@@ -516,7 +541,73 @@
             
             // Initialize
             updateNextSongs();
-            
+
+            // AI Song Polling
+            async function pollAISong() {
+                try {
+                    const response = await fetch(`${API_BASE}/api/ai/current`);
+                    if (response.ok) {
+                        const data = await response.json();
+
+                        if (data.currentSong) {
+                            showAISong(data.currentSong);
+                        } else {
+                            hideAISong();
+                        }
+                    }
+                } catch (error) {
+                    console.error('AI polling error:', error);
+                }
+            }
+
+            function showAISong(song) {
+                // Hide normal display, show AI section
+                document.querySelector('.current-song').style.display = 'none';
+                document.querySelector('.next-songs').style.display = 'none';
+                aiSongSection.style.display = 'block';
+
+                // Populate data
+                aiTitle.textContent = song.title;
+                aiDedicatedTo.textContent = song.dedicatedTo;
+
+                // Render lyrics
+                renderLyrics(song.lyrics);
+            }
+
+            function hideAISong() {
+                // Show normal display, hide AI section
+                document.querySelector('.current-song').style.display = 'block';
+                document.querySelector('.next-songs').style.display = 'block';
+                aiSongSection.style.display = 'none';
+            }
+
+            function renderLyrics(lyrics) {
+                const sections = [
+                    { title: 'Strofa 1', lines: lyrics.verse1, color: 'var(--text-light)' },
+                    { title: 'Ritornello', lines: lyrics.chorus, color: 'var(--accent-gold)' },
+                    { title: 'Strofa 2', lines: lyrics.verse2, color: 'var(--text-light)' },
+                    { title: 'Bridge', lines: lyrics.bridge, color: 'var(--accent-red)' },
+                    { title: 'Ritornello Finale', lines: lyrics.finalChorus, color: 'var(--accent-gold)' }
+                ];
+
+                aiLyrics.innerHTML = sections.map(section => `
+                    <div style="margin-bottom: var(--space-xxl);">
+                        <h3 style="color: ${section.color}; font-size: clamp(1.2rem, 3vw, 3rem); margin-bottom: var(--space-md); text-transform: uppercase; letter-spacing: 2px;">
+                            ${section.title}
+                        </h3>
+                        ${section.lines.map(line => `
+                            <p style="margin-bottom: var(--space-sm); color: ${section.color};">
+                                ${line}
+                            </p>
+                        `).join('')}
+                    </div>
+                `).join('');
+            }
+
+            // Start polling every 5 seconds
+            pollAISong();
+            setInterval(pollAISong, 5000);
+
             console.log('🎸 TheCenti Display Mode');
             console.log('Controls: → (next), ← (prev), V (toggle vote), A (toggle AI), F (fullscreen), ESC (exit)');
         });
