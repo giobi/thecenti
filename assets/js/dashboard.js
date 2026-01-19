@@ -263,7 +263,8 @@ class TheCentiDashboard {
             console.log('[DEBUG] Generation result:', result);
 
             if (result && result.success) {
-                this.showNotification(`✅ Canzone generata: "${result.song.lyrics.title}"`, 'success');
+                const songTitle = result.song?.lyrics?.title || 'Senza titolo';
+                this.showNotification(`✅ Canzone generata: "${songTitle}"`, 'success');
                 console.log('[DEBUG] Generated song:', result.song);
                 // Reload generated songs list
                 this.loadGeneratedSongs();
@@ -325,9 +326,11 @@ class TheCentiDashboard {
             return;
         }
 
-        console.log('[DEBUG] Rendering', songs.length, 'generated songs');
+        // Filter out malformed songs
+        const validSongs = songs.filter(song => song.lyrics && song.lyrics.title);
+        console.log('[DEBUG] Rendering', validSongs.length, 'valid generated songs (filtered from', songs.length, ')');
 
-        container.innerHTML = songs.map(song => `
+        container.innerHTML = validSongs.map(song => `
             <div class="generated-song-item" data-song-id="${song.id}" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 15px; margin-bottom: 1rem;">
                 <div class="song-info">
                     <div class="song-title" style="font-size: 1.2rem; font-weight: 700; color: var(--accent-gold);">${song.lyrics.title}</div>
@@ -350,7 +353,8 @@ class TheCentiDashboard {
             const result = await this.sendAIAction('set_current_song', { songId });
 
             if (result && result.success) {
-                this.showNotification(`🎸 "${result.currentSong.title}" è ora in live!`, 'success');
+                const songTitle = result.currentSong?.title || 'Canzone';
+                this.showNotification(`🎸 "${songTitle}" è ora in live!`, 'success');
                 this.loadGeneratedSongs();
             }
         } catch (error) {
@@ -384,6 +388,12 @@ class TheCentiDashboard {
 
             const song = response.songs.find(s => s.id === songId);
             if (!song) return;
+
+            // Check if song has valid lyrics
+            if (!song.lyrics || !song.lyrics.title) {
+                this.showNotification('❌ Canzone malformata (lyrics mancanti)', 'error');
+                return;
+            }
 
             // Show modal with lyrics
             const modal = document.getElementById('qrModal');
